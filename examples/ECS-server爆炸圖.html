@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - GLTFloader</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+</head>
+
+<body>
+	<div id="container"></div>
+	<div class="block">
+	<button id="rewindAnimationButton">
+		<span>Over View </span>
+		<div class="icon"></div>
+	</button></button>
+	<button id="startAnimationButton">
+		<span>Component </span>
+		<div class="icon"></div>
+	</button>
+	</div>
+	<div id="dialogue" class="dialogue"></div>
+	<!-- Import maps polyfill -->
+	<!-- Remove this when import maps will be widely supported -->
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
+	<script type="module">
+
+		import * as THREE from 'three';
+
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+		import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+		import Stats from 'three/addons/libs/stats.module.js';
+		import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+		import { LottieLoader } from 'three/addons/loaders/LottieLoader.js';
+
+		const clock = new THREE.Clock();
+
+		let camera, scene, stats, renderer, model, action;
+		let dialogueElement;
+		let delayTimer;
+		let mixer;
+		let spriteMaterial;
+
+		const sprites = []; // 保存所有 sprite 的數組
+		const dialogues = []; // 保存每個 sprite 的對話內容
+
+
+		init();
+
+
+		function init() {
+
+			const container = document.createElement( 'div' );
+			document.body.appendChild( container );
+
+			camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.1, 200 );
+			camera.position.set( 1.8, 1.8, 3 );
+			scene = new THREE.Scene();
+
+			// 導入監控效能視窗
+			stats = new Stats();
+			document.body.appendChild( stats.dom );
+
+
+			new RGBELoader()
+				.setPath( 'textures/equirectangular/' )
+				.load( 'metal-low.hdr', function ( texture ) {
+
+					texture.mapping = THREE.EquirectangularReflectionMapping;
+
+					scene.background = texture;
+					scene.backgroundBlurriness = 0;
+					scene.environment = texture;
+					scene.background = new THREE.Color( 0xffffff );
+
+				} );
+
+
+			const loader = new LottieLoader();
+			loader.setQuality( 3 );
+
+			const spriteData = [
+				{ position: { x: 0.9, y: 0.6, z: - 1.95 }, dialogue: '3个PCIe扩充槽' },
+				{ position: { x: 0.1, y: 0.6, z: - 1.95 }, dialogue: '3个PCIe扩充槽' },
+				{ position: { x: - 0.9, y: 0.55, z: - 1.7 }, dialogue: '电源供应器' },
+				{ position: { x: 0.9, y: 0.4, z: - 0.2 }, dialogue: '双列直插式存储模块' },
+				{ position: { x: - 0.6, y: 1.2, z: - 0.45 }, dialogue: '处理器' },
+				{ position: { x: 0.7, y: 1, z: 0.6 }, dialogue: '风扇模块' },
+				{ position: { x: - 0.5, y: 0.5, z: 1.5 }, dialogue: '存储盘' },
+
+			];
+			spriteData.forEach( data => {
+
+				loader.load( 'textures/lottie/explode-hover.json', function ( texture ) {
+
+					spriteMaterial = new THREE.SpriteMaterial( {
+						map: texture,
+						color: 0xc67f00,
+						transparent: true,
+						opacity: 1,
+						side: THREE.DoubleSide, // 啟用雙面渲染
+					} );
+
+					const sprite = new THREE.Sprite( spriteMaterial );
+					sprite.position.set( data.position.x, data.position.y, data.position.z );
+					sprite.scale.set( 0.12, 0.12, 0.12 );
+					scene.add( sprite );
+
+
+					 // 創建透明圓球當作hover目標
+					const hoverSphere = new THREE.Mesh(
+						new THREE.SphereGeometry( 0.15, 10, 10 ),
+						new THREE.MeshBasicMaterial( { transparent: true, opacity: 0.5, color: 0xffffff } )
+					);
+					hoverSphere.position.copy( sprite.position );
+					hoverSphere.visible = false;
+					scene.add( hoverSphere );
+		
+					// 將 hoverSphere取代原本sprite， 添加到sprites數組中
+					sprites.push( hoverSphere );
+		
+					// 保存對應的對話內容
+					dialogues.push( data.dialogue );
+
+
+				} );
+
+			} );
+
+
+			window.addEventListener( 'mousemove', onMouseMove );
+
+
+			// 材質創建
+
+			const metalMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0xd8d8d8,
+				metalness: 1.0,
+				roughness: 0.1,
+
+			} );
+
+			const silverMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0xc4c4c4,
+				metalness: 1.0,
+				roughness: 0.7,
+			} );
+			const silverMaterial2 = new THREE.MeshPhysicalMaterial( {
+				color: 0xe2e2e2,
+				metalness: 1.0,
+				roughness: 0.6,
+			} );
+
+
+			const greyMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0x898989,
+				metalness: 0.5,
+				roughness: 0.6,
+			} );
+			const blackMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0x353535,
+				metalness: 0.5,
+				roughness: 0.6,
+				clearcoat: 1.0,
+				clearcoatRoughness: 0.5,
+			} );
+
+			const bluePlasticMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0x385784,
+				roughness: 0.6,
+				metalness: 0.2,
+			} );
+			const whitePlasticMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0xd8d8d8,
+				roughness: 0.6,
+				metalness: 0.1,
+			} );
+			const greenPlasticMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0x406652,
+				roughness: 0.6,
+				metalness: 0.1,
+			} );
+			const yellowPlasticMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0x665f40,
+				roughness: 0.6,
+				metalness: 0.1,
+
+			} );
+			const softBluePlasticMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0x76b8ff,
+				roughness: 0.85,
+				metalness: 0.1,
+			} );
+
+			const glassMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0xd8d8d8,
+				metalness: 1.0,
+				roughness: 0.4,
+			} );
+
+			// model
+
+			const loader2 = new GLTFLoader().setPath( 'models/gltf/' );
+
+			// draco-loader
+			const dracoLoader = new DRACOLoader();
+			dracoLoader.setDecoderPath( '/examples/jsm/libs/draco/' );// 設置 Draco 解碼器的路徑
+			loader2.setDRACOLoader( dracoLoader );
+
+			loader2.load( 'cut-bake2.glb', function ( gltf ) {
+
+				model = gltf.scene;
+				model.position.set( 0, 0, 0 );
+				model.scale.set( 0.05, 0.05, 0.05 );
+
+				model.traverse( ( child ) => {
+
+					if ( child.isMesh ) {
+
+						child.material.side = THREE.DoubleSide;
+
+						if (
+							child.name === 'PSU-black' ||
+							child.name === 'fan-black' ||
+							child.name === 'PCIe-black' ||
+							child.name === 'memory-black' ||
+							child.name === 'storage-black' ) {
+
+							child.material = blackMaterial;
+
+						} else if (
+							child.name === 'PSU-metal' ||
+							child.name === 'cpu-memory-metal' ) {
+
+							child.material = metalMaterial;
+
+						} else if ( child.name === 'fan-grey' ||
+							child.name === 'storage-grey' ) {
+
+							child.material = greyMaterial;
+
+						} else if ( child.name === 'PSU-silver' ||
+							child.name === 'cpu-memory-silver' ||
+							child.name === 'storage-silver' ||
+							child.name === 'PCIe-silver' ) {
+
+							child.material = silverMaterial;
+
+
+						} else if ( child.name === 'memory-deep-blue' ||
+							child.name === 'fan-deep-blue'
+						) {
+
+							child.material = bluePlasticMaterial;
+
+						} else if ( child.name === 'memory-white' ) {
+
+							child.material = whitePlasticMaterial;
+
+						} else if ( child.name === 'PCIe-green' ) {
+
+							child.material = greenPlasticMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'PCIe-yellow' ) {
+
+							child.material = yellowPlasticMaterial;
+
+						} else if ( child.name === 'PSU-blue' ) {
+
+							child.material = softBluePlasticMaterial;
+
+						} else if ( child.name === 'glass' ) {
+
+							child.material = glassMaterial;
+
+						} else if ( child.name === 'out-silver' ) {
+
+							child.material = silverMaterial2;
+
+						}
+
+					}
+
+				} );
+
+				mixer = new THREE.AnimationMixer( model );
+				action = mixer.clipAction( gltf.animations[ 0 ] );
+				scene.add( model );
+
+			} );
+
+			// 圓點監聽彈出對話筐事件
+
+			const raycaster = new THREE.Raycaster();
+			const mouse = new THREE.Vector2();
+
+			function onMouseMove( event ) {
+
+				mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+				mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+
+				raycaster.setFromCamera( mouse, camera );
+		
+				const allObjects = sprites.map( sprite => sprite.hoverSphere ? [ sprite, sprite.hoverSphere ] : [ sprite ] ).flat();
+				const intersects = raycaster.intersectObjects( allObjects, true );
+
+
+				if ( intersects.length > 0 ) {
+		
+					const sprite = intersects[ 0 ].object;
+		
+
+					clearTimeout( delayTimer );
+					delayTimer = setTimeout( () => {
+
+						const spritePosition = sprite.position.clone();
+						const spriteScreenPosition = spritePosition.project( camera );
+						const screenX = ( spriteScreenPosition.x + 1 ) * window.innerWidth / 2;
+						const screenY = ( - spriteScreenPosition.y + 1 ) * window.innerHeight / 2;
+
+						// 使用對應的對話內容
+						const index = sprites.indexOf( sprite );
+						const dialogueContent = dialogues[ index ];
+
+						// 設置對話框的位置和內容
+						dialogueElement = document.getElementById( 'dialogue' );
+						dialogueElement.innerHTML = `<p>${dialogueContent}</p>`;
+						dialogueElement.style.left = screenX + 'px';
+						dialogueElement.style.top = screenY + 'px';
+						dialogueElement.style.display = 'block';
+
+		
+					}, 40 );
+
+				} else {
+
+					dialogueElement.style.display = 'none';
+
+				}
+
+
+
+			}
+
+			renderer = new THREE.WebGLRenderer( { depth: true } );
+			// 抗鋸齒
+			renderer.setPixelRatio( window.devicePixelRatio );
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.toneMapping = THREE.ACESFilmicToneMapping;
+			renderer.toneMappingExposure = 1.3;
+			container.appendChild( renderer.domElement );
+			window.addEventListener( 'resize', onWindowResize );
+
+		}
+
+
+
+		// 添加按钮点击事件监听器
+
+		const startAnimationButton = document.getElementById( 'startAnimationButton' );
+		startAnimationButton.addEventListener( 'click', () => {
+
+		
+			// 只有在動畫靜止的時候才不會有reset()
+			if ( action.isRunning() == false ) {
+
+			  action.reset();
+				action.timeScale = 1;
+				action.setLoop( THREE.LoopOnce, 1 );
+				action.clampWhenFinished = true; // 在最後一幀停止動畫
+				action.play();
+
+			}
+		
+		} );
+
+		const rewindAnimationButton = document.getElementById( 'rewindAnimationButton' );
+		// rewindAnimationButton.disabled = true; // 預設設為不可點擊
+
+
+		rewindAnimationButton.addEventListener( 'click', () => {
+
+			action.paused = false;
+			action.timeScale = - 1;
+			action.setLoop( THREE.LoopOnce, 0 );
+
+			action.play();
+
+		} );
+
+
+		
+
+
+
+		// 鏡頭控制
+		const controls = new OrbitControls( camera, renderer.domElement );
+
+		// 是否能放大縮小
+		controls.enableZoom = true;
+
+		controls.dampingFactor = 0.05; // 阻尼系數
+		controls.autoRotateSpeed = 1.15;
+		controls.enablePan = false;
+		controls.enableDamping = true;
+
+		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
+		controls.minDistance = 4;
+		controls.maxDistance = 6.5;
+
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+
+		}
+
+		function update() {
+
+			controls.update();
+			stats.update();
+
+			const delta = clock.getDelta();
+			// update會一直持續進行，所以要把mixer包好後再放進來，否則一開始mixer在還沒建好就進來會一直報錯
+			if ( mixer ) {
+
+				mixer.update( delta );
+		
+			}
+
+		}
+		//
+
+		function animate() {
+
+			renderer.render( scene, camera );
+			requestAnimationFrame( animate );
+			update();
+
+		}
+
+		animate();
+
+
+
+
+	</script>
+
+</body>
+
+</html>
+
+<style>
+
+	#dialogue {
+		position: absolute;
+		margin-left: 30px;
+		text-align: center;
+		background-color: rgba(0, 0, 0, 0.35);
+		color: white;
+		backdrop-filter: blur(3px);
+		/* padding: 10px 10px;  */
+		display: none;
+
+
+	}
+
+	.dialogue p:nth-child(1) {
+		margin: 0;
+		padding: 10px 40px;
+		background-color: rgba(0, 0, 0, 0.35);
+		font-size: 18px;
+	}
+	.html{
+		position: relative;
+	}
+	.block{
+		position: absolute;
+		display: flex;
+		flex-direction: column;
+		top:40%;
+		left: 5%;
+	}
+	#startAnimationButton ,#rewindAnimationButton{
+		width: 180px;
+		height: 40px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		border: none;
+		border-radius: 0;
+		background-color: #afafaf;
+		/* padding: 20px 60px; */
+		color: #ffff;
+		padding: 0 20px;
+		
+	}
+
+	#rewindAnimationButton:hover{
+		color: #ffff;
+		background-color: #2a52b1;
+		cursor: pointer;
+	}
+	
+	#startAnimationButton:hover{
+		background-color: #2a52b1;
+		color: #ffff;
+		cursor: pointer;
+	}
+	#startAnimationButton:focus{
+		background-color: #2a52b1;
+		cursor: none;
+		.icon{
+			opacity: 1;
+		}
+		
+	}
+	#rewindAnimationButton:focus{
+		background-color: #2a52b1;
+		cursor: none;
+		.icon{
+			opacity: 1;
+		}
+	}
+	.icon{
+		width: 12px;
+		height: 12px;
+		background-image: url(../examples/textures/arrow.svg);
+		background-repeat: no-repeat;
+		background-size: 100% ;
+		opacity: 0;
+		transition: opacity 0.3s ease-in-out;
+	}
+
+</style>

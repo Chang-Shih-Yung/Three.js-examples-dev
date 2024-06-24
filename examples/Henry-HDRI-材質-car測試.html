@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - GLTFloader</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+</head>
+
+<body>
+	<div id="container"></div>
+
+	<!-- Import maps polyfill -->
+	<!-- Remove this when import maps will be widely supported -->
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+		
+
+	<script type="module">
+
+		import * as THREE from 'three';
+
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+		// import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+		import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+		import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+		import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+		import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+		import Stats from 'three/addons/libs/stats.module.js';
+
+		// import { RectAreaLightHelper } from 'three/addons/helpers/RectAreaLightHelper.js';
+		import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+
+		let camera, scene, renderer, stats, model, model2, composer;
+		// let mixer;
+		let spotLight, lightHelper;
+
+		// 如果一个三维场景或物體是不停变化的，肯定要周期性调用执行。直接调用 Clock 对象的方法和属性
+		// const clock = new THREE.Clock();
+
+		// 調整光暈係數
+
+		const params = {
+			threshold: 0,
+			strength: 0.1,
+			radius: 0.001,
+			exposure: 1
+		};
+
+		
+
+		init();
+
+		function init() {
+
+			scene = new THREE.Scene();
+
+			camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 20000 );
+			camera.position.set( - 3.8, 4, 2 );
+
+			// 導入監控效能視窗
+			stats = new Stats();
+			document.body.appendChild( stats.dom );
+			// new RGBELoader()
+			// 	.setPath( 'textures/equirectangular/' )
+			// 	.load( 'metal2.hdr', function ( texture ) {
+
+			// 		texture.mapping = THREE.EquirectangularReflectionMapping;
+
+			// 		scene.background = texture;
+			// 		scene.backgroundBlurriness = 0;
+			// 		scene.environment = texture;
+			// 		scene.background = new THREE.Color( 0x000000 );
+
+
+			// 	} );
+
+
+		
+			// 引入區域光
+
+			RectAreaLightUniformsLib.init();
+		
+			const rectLight1 = new THREE.RectAreaLight( 0xcfe3ff, 0.3, 20, 5 );
+			rectLight1.position.set( 0, 7, - 4.3 );
+			rectLight1.rotateY( Math.PI * 1.5 );
+			rectLight1.rotateX( - Math.PI / 2 );
+			rectLight1.rotateZ( - Math.PI / 1 );
+		
+		
+
+			scene.add( rectLight1 );
+
+			// const rectLight2 = new THREE.RectAreaLight( 0xffffff, 10, 1, 3 );
+			// rectLight2.position.set( - 4, 3, - 8.3 );
+			// rectLight2.rotateY( Math.PI * 1.5 );
+			// rectLight2.rotateX( Math.PI / 7.5 );
+			// rectLight2.rotateZ( - Math.PI / 1 );
+
+
+			// scene.add( rectLight2 );
+
+		
+			// 區域光助手
+			// scene.add( new RectAreaLightHelper( rectLight1 ) );
+			// const rectLightHelper = new RectAreaLightHelper( rectLight1 );
+			// scene.add( rectLightHelper );
+
+
+
+		
+
+			// 引入聚光燈
+			spotLight = new THREE.SpotLight( 0xcfe3ff, 10 );
+			spotLight.position.set( 4, 6, 5 );
+			spotLight.angle = Math.PI / 6;
+			spotLight.penumbra = 1;
+			spotLight.decay = 3;
+			spotLight.distance = 50;
+
+			spotLight.castShadow = true;
+			spotLight.shadow.mapSize.width = 1000;
+			spotLight.shadow.mapSize.height = 1000;
+			spotLight.shadow.camera.near = 1;
+			spotLight.shadow.camera.far = 2;
+			spotLight.shadow.focus = 1;
+			scene.add( spotLight );
+
+			// 聚光燈助手
+			// lightHelper = new THREE.SpotLightHelper( spotLight );
+			// scene.add( lightHelper );
+
+
+
+			// model
+		
+			const textureLoader = new THREE.TextureLoader();
+			const map1 = textureLoader.load( 'textures/noise4.jpg' );
+
+
+			const loader = new GLTFLoader().setPath( 'models/gltf/' );
+			loader.load( 'car-test.glb', function ( gltf ) {
+
+				model = gltf.scene;
+
+				model.position.set( 0, 0, 0 );
+				model.scale.set( 0.02, 0.02, 0.02 );
+
+
+				const metalMaterial = new THREE.MeshStandardMaterial( {
+					color: 0xaaaaaa, metalness: 1.0, roughness: 0.2, clearcoat: 0.9, reflectivity: 1,
+					clearcoatRoughness: 0,
+				} );
+				const bodyMaterial = new THREE.MeshPhysicalMaterial( {
+					color: 0xffffff, metalness: 1.0, roughness: 0.05, reflectivity: 1,
+				} );
+				const blackMaterial = new THREE.MeshPhysicalMaterial( {
+					color: 0x000000, metalness: 0.1, roughness: 0.6, clearcoat: 1.0,
+					clearcoatRoughness: 0.2, bumpMap: map1, bumpScale: 0.005
+				} );
+				const redMaterial = new THREE.MeshPhysicalMaterial( {
+					color: 0xff1800, metalness: 0.1, roughness: 0.6, clearcoat: 1.0,
+					clearcoatRoughness: 0.2, bumpMap: map1, bumpScale: 0.0005
+				} );
+				const glassMaterial = new THREE.MeshPhysicalMaterial( {
+					color: 0xdddddd,
+					metalness: 0.02,
+					roughness: 0.05,
+					transmission: 1,
+					ior: 1.5,
+					reflectivity: 0,
+					sheen: 0,
+					specularIntensity: 0.8,
+				} );
+				const redLightMaterial = new THREE.MeshStandardMaterial( {
+					color: 0xff6b00,
+					// wireframe: true,
+					emissive: 0xff6b00,
+					emissiveIntensity: 100,
+				} );
+				const carLightMaterial = new THREE.MeshStandardMaterial( {
+					color: 0xffffff,
+					// wireframe: true,
+					emissive: 0xffffff,
+					emissiveIntensity: 50,
+				} );
+				const glassLightMaterial = new THREE.MeshStandardMaterial( {
+					color: 0xdddddd,
+					metalness: 0.02,
+					roughness: 0.01,
+					transmission: 1,
+					ior: 1.5,
+					reflectivity: 1,
+					sheen: 0,
+					specularIntensity: 0.8,
+				} );
+				const bubbleMaterial = new THREE.MeshPhysicalMaterial( {
+					color: 0x000000, metalness: 0.1, roughness: 0.6, clearcoat: 0.6,
+					clearcoatRoughness: 0.3, bumpMap: map1, bumpScale: 0.01
+				} );
+
+				model.traverse( ( child ) => {
+
+					if ( child.isMesh ) {
+
+						child.receiveShadow = true;
+						child.castShadow = true;
+
+						if ( child.name === 'metal' ) {
+
+							child.material = bodyMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'glass' ) {
+
+							child.material = glassMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'red-light' ) {
+		
+							child.material = redLightMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'black' ) {
+		
+							child.material = blackMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'silver' ) {
+		
+							child.material = metalMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'car-light' ) {
+		
+							child.material = carLightMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'red' ) {
+		
+							child.material = redMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'bubble' ) {
+		
+							child.material = bubbleMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						} else if ( child.name === 'glass-light' ) {
+		
+							child.material = glassLightMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						}
+
+					}
+
+				} );
+				// 用于场景中特定对象的动画的播放器。讓gltf本身的動畫播放
+				// mixer = new THREE.AnimationMixer( model );
+				// mixer.clipAction( gltf.animations[ 0 ] ).play();
+				scene.add( model );
+
+		
+
+
+			} );
+
+			const loader2 = new GLTFLoader().setPath( 'models/gltf/' );
+			loader2.load( 'car-test2.glb', function ( gltf ) {
+
+				model2 = gltf.scene;
+
+				model2.position.set( 0, 0, 0 );
+				model2.scale.set( 0.02, 0.02, 0.02 );
+
+				const groundMaterial = new THREE.MeshPhysicalMaterial( {
+					color: 0x000000, metalness: 0.4, roughness: 0.5, reflectivity: 1,
+					bumpMap: map1, bumpScale: 0.001
+				} );
+
+				const lightMaterial = new THREE.MeshStandardMaterial( {
+					color: 0xcfe3ff,
+					// wireframe: true,
+					emissive: 0xcfe3ff,
+					emissiveIntensity: 2,
+				} );
+
+				model2.traverse( ( child ) => {
+
+					if ( child.isMesh ) {
+
+		
+						child.receiveShadow = true;
+				    child.castShadow = true;
+
+						if ( child.name === 'ground' ) {
+
+							child.material = groundMaterial;
+							child.material.side = THREE.DoubleSide;
+							child.material.needsUpdate = true;
+
+
+						} else if ( child.name === 'light' ) {
+		
+							child.material = lightMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+
+						}
+
+					}
+
+				} );
+		
+				scene.add( model2 );
+
+
+			} );
+
+
+			//建立渲染器
+			const container = document.createElement( 'div' );
+			document.body.appendChild( container );
+			renderer = new THREE.WebGLRenderer();
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+		
+			// renderer.toneMapping = THREE.ACESFilmicToneMapping;
+			//將渲染器插入到body標籤裡
+			document.body.appendChild( renderer.domElement );
+
+			// 光暈渲染
+			const renderScene = new RenderPass( scene, camera );
+		
+			const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+			bloomPass.threshold = params.threshold;
+			bloomPass.strength = params.strength;
+			bloomPass.radius = params.radius;
+
+			const outputPass = new OutputPass( THREE.ReinhardToneMapping );
+
+			composer = new EffectComposer( renderer );
+			composer.addPass( renderScene );
+			// 光暈
+			composer.addPass( bloomPass );
+			// 真實自發光
+			composer.addPass( outputPass );
+
+
+		}
+
+		// 鏡頭控制
+		const controls = new OrbitControls( camera, renderer.domElement );
+		// 是否能放大縮小
+		controls.enableZoom = true;
+		controls.dampingFactor = 0.1; // 阻尼系數
+		// controls.autoRotate = true; //啟用自動旋轉
+		controls.autoRotateSpeed = 0.15;
+		controls.enablePan = true;
+		controls.enableDamping = true;
+		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
+		// controls.minDistance = 12;
+		// controls.maxDistance = 12;
+
+		window.addEventListener( 'resize', onWindowResize );
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+
+		}
+
+		const update = () => {
+
+			controls.update();
+			// lightHelper.update();
+			// 數據更新
+			stats.update();
+
+
+		};
+
+		//
+
+		function animate() {
+		
+			// const delta = clock.getDelta();
+			composer.render();
+			//周期性执行渲染函数，请求下一帧渲染
+			requestAnimationFrame( animate );
+			// Mixer 是用来管理所有动作的，它可以调度出对象的某个动作进行操控，在這裡針對gltf的動畫。
+			// mixer.update( delta );
+
+			update();
+
+		}
+
+		animate();
+
+	</script>
+
+</body>
+
+</html>

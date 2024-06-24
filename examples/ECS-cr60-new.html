@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - simple text from json</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+	<style>
+
+	</style>
+</head>
+
+<body>
+
+	<!-- Import maps polyfill -->
+	<!-- Remove this when import maps will be widely supported -->
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
+	<script type="module">
+
+		import * as THREE from 'three';
+		import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+		import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+		import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+		import { LottieLoader } from 'three/addons/loaders/LottieLoader.js';
+		import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+		import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+		import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+		import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+		let camera, scene, renderer, model, composer;
+
+		const params = {
+			threshold: 0,
+			strength: 0.08,
+			radius: 0.5,
+			exposure: 1
+		};
+
+
+		init();
+
+		function init() {
+
+			camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 1, 20000 );
+			// camera.position.set(0, 100, 350);
+
+			scene = new THREE.Scene();
+		
+			// const ambientLight = new THREE.AmbientLight( 0xc5e2ff, 5 );
+			// scene.add( ambientLight );
+
+			const loader = new FontLoader();
+			loader.load( 'fonts/droid/droid_sans_bold.typeface.json', function ( font ) {
+
+				const color = new THREE.Color( 0x444444 );
+
+				const matLite = new THREE.MeshBasicMaterial( {
+					color: color,
+		
+					transparent: true,
+					opacity: 1,
+					side: THREE.DoubleSide
+				} );
+
+				const message = 'CR60';
+
+				const shapes = font.generateShapes( message, 1 );
+
+				const geometry = new THREE.ShapeGeometry( shapes );
+
+				geometry.computeBoundingBox();
+
+				const xMid = - 0.5 * ( geometry.boundingBox.max.x - geometry.boundingBox.min.x );
+
+				geometry.translate( xMid, 0, 0 );
+
+
+
+				const text = new THREE.Mesh( geometry, matLite );
+				text.position.z = 2.5;
+				text.position.x = 0;
+				text.position.y = - 1;
+				text.rotation.x = Math.PI / - 2;
+				// scene.add( text );
+
+
+
+				const holeShapes = [];
+
+				for ( let i = 0; i < shapes.length; i ++ ) {
+
+					const shape = shapes[ i ];
+
+					if ( shape.holes && shape.holes.length > 0 ) {
+
+						for ( let j = 0; j < shape.holes.length; j ++ ) {
+
+							const hole = shape.holes[ j ];
+							holeShapes.push( hole );
+
+						}
+
+					}
+
+				}
+
+				shapes.push.apply( shapes, holeShapes );
+
+				const strokeText = new THREE.Group();
+
+
+				scene.add( strokeText );
+
+			} ); //end load function
+
+
+			new RGBELoader()
+				.setPath( 'textures/equirectangular/' )
+				.load( 'metal2.hdr', function ( texture ) {
+
+					texture.mapping = THREE.EquirectangularReflectionMapping;
+
+					scene.background = texture;
+					scene.environment = texture;
+					scene.background = new THREE.Color( 0x000000 );
+
+
+				} );
+			const textureLoader = new THREE.TextureLoader();
+			const map6 = textureLoader.load( 'textures/noise4.jpg' );
+			const map7 = textureLoader.load( 'textures/bump.png' );
+			const map8 = textureLoader.load( 'textures/hairline.jpeg' );
+
+			const whiteLightMaterial = new THREE.MeshStandardMaterial( {
+				color: 0x00ffff, // 发光的颜色
+				emissive: 0x00ffff, // 设置材质的发光颜色
+				emissiveIntensity: 15, // 设置发光强度
+				metalness: 0.1, // 金属度
+				roughness: 0.1, // 粗糙度
+			} );
+
+			const metalMaterial = new THREE.MeshStandardMaterial( {
+				color: 0xd8d8d8,
+				metalness: 1.0,
+				bumpMap: map6,
+				bumpScale: 0.00005,
+				metalnessMap: map7,
+				roughness: 0.1,
+				sheen: 1,
+			} );
+
+			// 还可以设置其他光照属性，如emissive和emissiveIntensity
+			metalMaterial.emissive = new THREE.Color( 0x0000ff ); // 设置发光颜色为蓝色
+			metalMaterial.emissiveIntensity = 0.01; // 发光强度
+
+			const blackMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0x2d2d2d,
+				// map: map6,
+				bumpMap: map8,
+				bumpScale: 0.005,
+				metalness: 1.0,
+				roughness: 0.4,
+				clearcoat: 1,
+				clearcoatRoughness: 0.2,
+			} );
+
+
+			const blackMaterialRough = new THREE.MeshPhysicalMaterial( {
+				color: 0x000000,
+				sheen: 1,
+				metalness: 0.1,
+				roughness: 0.1,
+				clearcoat: 1.0,
+				clearcoatRoughness: 0,
+			} );
+			const blackMaterial2 = new THREE.MeshPhysicalMaterial( {
+				color: 0x353535,
+				map: map6,
+				bumpMap: map6,
+				bumpScale: 0.0005,
+				metalness: 0.5,
+				roughness: 0.8,
+				clearcoat: 1,
+				clearcoatRoughness: 0.3,
+			} );
+			const blackMaterial3 = new THREE.MeshPhysicalMaterial( {
+				color: 0x353535,
+				map: map6,
+				bumpMap: map6,
+				bumpScale: 0.0002,
+				metalness: 0.5,
+				roughness: 0.6,
+				clearcoat: 1,
+				clearcoatRoughness: 0.4,
+			} );
+
+			const glassMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0xffffff,
+				metalness: 0.05,
+				roughness: 0.02,
+				transmission: 1,
+				// ior: 1.5,
+				reflectivity: 0,
+				sheen: 0.5,
+				specularIntensity: 0.8,
+				clearcoat: 1.0,
+			} );
+
+
+			// model
+
+			const loader2 = new GLTFLoader().setPath( 'models/gltf/' );
+
+			// draco-loader
+			const dracoLoader = new DRACOLoader();
+			dracoLoader.setDecoderPath( '/examples/jsm/libs/draco/' );// 設置 Draco 解碼器的路徑
+			loader2.setDRACOLoader( dracoLoader );
+
+			loader2.load( 'cr60-2.glb', function ( gltf ) {
+
+				model = gltf.scene;
+				model.position.set( 0, - 1.5, 0 );
+				// model.rotation.y = Math.PI;
+				model.scale.set( 0.12, 0.12, 0.12 );
+				model.traverse( ( child ) => {
+
+					if ( child.isMesh ) {
+
+						if ( child.name === 'keyboard-light' || child.name === 'camera-green-light' ) {
+
+							child.material = whiteLightMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'body-black-metal' || child.name === 'keyboard-bottom-black' || child.name === 'black-plastic' ) {
+
+							child.material = blackMaterial2;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if (
+							child.name === 'keyboard' || child.name === 'screen-inside-black' || child.name === 'balck-bubble' ) {
+
+							child.material = blackMaterialRough;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if (
+							child.name === 'body-screen-black-metal' ) {
+
+							child.material = blackMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if (
+							child.name === 'slide-black' ) {
+
+							child.material = blackMaterial3;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'soft-metal' || child.name === 'power-light' ) {
+
+							child.material = metalMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'screen-out-glass' ) {
+
+							child.material = glassMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+		
+					}
+		
+				} );
+
+				scene.add( model );
+
+				// const model1 = model.getObjectByName('body-screen-black-metal');
+				// const model2 = model.getObjectByName('screen-inside-black');
+				// if(model1 || model2){
+				// 	model1.visible = false;
+				// }
+
+				// 螢幕載入lottie
+				const glassScreen = model.getObjectByName( 'screen-out-glass' );
+
+				if ( glassScreen ) {
+
+					const loader3 = new LottieLoader();
+					loader3.setQuality( 0.6 );
+					loader3.load( 'textures/lottie/24017-lottie-logo-animation.json', function ( texture ) {
+
+						// 创建 Lottie 动画材质
+						const lottieMaterial = new THREE.MeshBasicMaterial( { map: texture, transparent: true, opacity: 1 } );
+						// 将材质应用到 'screen-out-glass' 模型
+						glassScreen.material = lottieMaterial;
+
+						texture.animation.setSpeed( 2 );
+
+						// 调整UV映射以缩小动画
+						const textureSize = { x: 0.8, y: 1 };
+						const textureRepeat = {
+							x: 1 / textureSize.x,
+							y: 1 / textureSize.y
+						};
+						glassScreen.material.map.repeat.set( textureRepeat.x, textureRepeat.y );
+						// 偏移
+						const xOffset = - 0.15;
+						glassScreen.material.map.offset.set( xOffset, 0 );
+
+
+					} );
+
+				}
+
+
+			} );
+
+			//建立渲染器
+			const container = document.createElement( 'div' );
+			document.body.appendChild( container );
+			renderer = new THREE.WebGLRenderer();
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+		
+			// renderer.toneMapping = THREE.ACESFilmicToneMapping;
+			//將渲染器插入到body標籤裡
+			document.body.appendChild( renderer.domElement );
+
+			// 光暈渲染
+			const renderScene = new RenderPass( scene, camera );
+		
+			const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+			bloomPass.threshold = params.threshold;
+			bloomPass.strength = params.strength;
+			bloomPass.radius = params.radius;
+
+			const outputPass = new OutputPass( THREE.ReinhardToneMapping );
+
+			composer = new EffectComposer( renderer );
+			composer.addPass( renderScene );
+			// 光暈
+			composer.addPass( bloomPass );
+			// 真實自發光
+			composer.addPass( outputPass );
+		
+		} // end init
+
+
+
+		// 鏡頭控制
+		const controls = new OrbitControls( camera, renderer.domElement );
+
+		// 不可翻轉地平線以下
+		controls.maxPolarAngle = Math.PI / 2.5;
+		// 不可翻轉地平線以上
+		controls.minPolarAngle = Math.PI / 2.5;
+
+		// 是否能放大縮小
+		controls.enableZoom = false;
+
+		controls.dampingFactor = 0.05; // 阻尼系數
+		controls.autoRotate = true; //啟用自動旋轉
+		controls.autoRotateSpeed = 5.5;
+		controls.enablePan = false;
+		controls.enableDamping = true;
+
+		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
+		controls.minDistance = 6;
+		controls.maxDistance = 6;
+
+
+
+		// 禁止所以滑鼠行為
+		// controls.enabled = false;
+		window.addEventListener( 'resize', onWindowResize );
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+
+		}
+
+		function update() {
+
+			controls.update();
+
+		}
+		//
+
+		function animate() {
+
+			composer.render();
+
+			requestAnimationFrame( animate );
+
+			update();
+
+}
+
+		animate();
+
+	</script>
+
+</body>
+
+</html>

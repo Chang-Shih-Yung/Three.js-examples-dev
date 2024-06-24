@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - materials - cubemap mipmaps</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100&family=Orbitron:wght@400;500;600;700;800;900&display=swap"
+		rel="stylesheet">
+</head>
+
+<body>
+
+	<!-- <div id="info"> Click the markers to show the label</div> -->
+	<div id="markerLabel" class="hidden">
+		<!-- <button id="closeButton"></button> -->
+		<div class="text" id="cubesat"></div>
+		<div class="text" id="application"></div>
+		<div class="text" id="ecs-product"></div>
+		<div class="text" id="about-project"></div>
+	</div>
+
+	<!-- Import maps polyfill -->
+	<!-- Remove this when import maps will be widely supported -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.7.4/lottie.min.js"></script>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
+
+	<script type="module">
+		import * as THREE from 'three';
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		// import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+		import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+		import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+		import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+		import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+		import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+		import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+		import Stats from 'three/addons/libs/stats.module.js';
+		// import { LottieLoader } from 'three/addons/loaders/LottieLoader.js';
+
+		let model;
+
+
+		// 調整光暈係數
+		const params = {
+			threshold: 0,
+			strength: 0.35,
+			radius: 1,
+			exposure: 1
+		};
+
+		const scene = new THREE.Scene();
+		const camera = new THREE.PerspectiveCamera( 75, innerWidth / innerHeight, 4, 200000 );
+		camera.position.set( 70, 0, - 5 ).setLength( 1400 );
+		const renderer = new THREE.WebGLRenderer( { antialias: true } );
+		renderer.setPixelRatio( window.devicePixelRatio );
+		renderer.setSize( innerWidth, innerHeight );
+		renderer.setClearColor( 0x000000 );
+		document.body.appendChild( renderer.domElement );
+
+		const labelRenderer = new CSS2DRenderer();
+		labelRenderer.setSize( window.innerWidth, window.innerHeight );
+		labelRenderer.domElement.style.position = 'absolute';
+		labelRenderer.domElement.style.top = '0px';
+		document.body.appendChild( labelRenderer.domElement );
+
+		// 導入監控效能視窗
+		const stats = new Stats();
+		document.body.appendChild( stats.dom );
+
+		window.addEventListener( 'resize', onWindowResize );
+
+		// 鏡頭控制
+		const controls = new OrbitControls( camera, labelRenderer.domElement );
+		// // 不可翻轉地平線以下
+		controls.maxPolarAngle = Math.PI / 1.6;
+		// // 不可翻轉地平線以上
+		controls.minPolarAngle = Math.PI / 2.2;
+		// 设置最小方位角（左转的最大角度）
+		// controls.minAzimuthAngle = - Math.PI / 7;
+		// 设置最大方位角（右转的最大角度）
+		// controls.maxAzimuthAngle = Math.PI / 7;
+		// 是否能放大縮小
+		controls.enableZoom = true;
+		controls.dampingFactor = 0.1; // 阻尼系數
+		// controls.autoRotate = true; //啟用自動旋轉
+		controls.autoRotateSpeed = 0.15;
+		controls.enablePan = false;
+		controls.enableDamping = true;
+		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
+		controls.minDistance = 12;
+		controls.maxDistance = 12;
+
+		// 光暈渲染
+		const renderScene = new RenderPass( scene, camera );
+
+		const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+		bloomPass.threshold = params.threshold;
+		bloomPass.strength = params.strength;
+		bloomPass.radius = params.radius;
+
+		const outputPass = new OutputPass( THREE.ReinhardToneMapping );
+
+		const composer = new EffectComposer( renderer );
+		composer.addPass( renderScene );
+		// 光暈
+		composer.addPass( bloomPass );
+		// 真實自發光
+		composer.addPass( outputPass );
+
+
+
+		const globalUniforms = { time: { value: 0 } };
+
+
+		const loader2 = new GLTFLoader().setPath( 'models/gltf/' );
+
+
+		loader2.load( 'planet2.glb', function ( gltf ) {
+
+			model = gltf.scene;
+			model.position.set( 0, 0, 0 );
+			// model.rotateY( Math.PI / 2 );
+			// model.scale.set( 1.03, 1.03, 1.03 );
+
+			model.traverse( ( child ) => {
+
+				if ( child.isMesh ) {
+
+					if ( child.name === 'planet' ) {
+
+						const lineMaterial = new THREE.MeshBasicMaterial( {
+							color: 0xffffff,
+							wireframe: true,
+							transparent: true,
+							opacity: 0.008,
+
+						} );
+						child.material = lineMaterial;
+						child.material.side = THREE.DoubleSide;
+
+					}
+
+				}
+
+			} );
+
+			scene.add( model );
+
+		} );
+
+		// <GLOBE>
+
+		// 圓點離中心距離
+		const rad = 5;
+
+		const globe = new THREE.Points();
+		scene.add( globe );
+
+		// </GLOBE>
+
+		// <Markers>
+		const markerInfo = []; // information on markers
+		const gMarker = new THREE.CircleGeometry( 0.35, 5 );
+
+		// 圓圈與他的材質與動態
+		const mMarker = new THREE.MeshBasicMaterial( {
+			color: 0xffffff,
+			vertexColors: THREE.FaceColors,
+			onBeforeCompile: ( shader ) => {
+
+				shader.uniforms.time = globalUniforms.time;
+				shader.vertexShader = `
+    	attribute float phase;
+      varying float vPhase;
+      ${shader.vertexShader}
+    `.replace(
+				'#include <begin_vertex>',
+				`#include <begin_vertex>
+      	vPhase = phase; // de-synch of ripples
+      `
+			);
+				//console.log(shader.vertexShader);
+				shader.fragmentShader = `
+    	uniform float time;
+      varying float vPhase;
+    	${shader.fragmentShader}
+    `.replace(
+				'vec4 diffuseColor = vec4( diffuse, opacity );',
+				`
+      vec2 lUv = (vUv - 0.5) * 2.;
+      float val = 0.;
+      float lenUv = length(lUv);
+      val = max(val, 1. - step(0.25, lenUv)); // central circle
+      val = max(val, step(0.4, lenUv) - step(0.5, lenUv)); // outer circle
+      
+      float tShift = fract(time * 0.45 + vPhase);
+      val = max(val, step(0.4 + (tShift * 0.55), lenUv) - step(0.5 + (tShift * 0.5), lenUv)); // ripple
+      
+      if (val < 0.5) discard;
+      
+      vec4 diffuseColor = vec4( diffuse, opacity );`,
+			);
+				//console.log(shader.fragmentShader)
+
+
+			}
+
+			// -----------------動態結束
+		} );
+
+		// 圓圈位置與顯示的標題
+
+		mMarker.defines = { USE_UV: ' ' }; // needed to be set to be able to work with UVs
+		const markers = new THREE.InstancedMesh( gMarker, mMarker, 5 );
+
+		const dummy = new THREE.Object3D();
+		const phase = [];
+		const markerLabels = [ 'Cubesat', 'Application', 'About Project', 'ECS Product', 'Cubesat' ];
+
+		// 為圓圈標記設定特定位置
+		const positions = [
+			new THREE.Vector3( - 2.8, 3, 3 ),
+			new THREE.Vector3( 4.4, - 1.8, 1.8 ),
+			new THREE.Vector3( 4.4, 1.3, - 2 ),
+			new THREE.Vector3( - 3, - 1.5, - 3.6 ),
+			new THREE.Vector3( 4, 2.6, 1.8 )
+		];
+		for ( let i = 0; i < positions.length; i ++ ) {
+
+			// dummy.position.randomDirection().setLength( rad + 0.005 );
+			dummy.position.copy( positions[ i ] );
+			dummy.lookAt( dummy.position.clone().setLength( rad + 1 ) );
+			dummy.updateMatrix();
+			markers.setMatrixAt( i, dummy.matrix );
+			phase.push( Math.random() );
+
+			markerInfo.push( {
+				id: markerLabels[ i ],
+				crd: dummy.position.clone()
+			} );
+
+
+			// 創建新的 CSS2DObject 並保存到對應的數組中
+			const newLabel = new CSS2DObject( document.getElementById( 'markerLabel' ).cloneNode( true ) );
+			newLabel.position.copy( dummy.position );
+			newLabel.element.innerHTML = `<b>${markerLabels[ i ]}</b>`;
+			newLabel.element.animate( {
+				duration: 350
+			} );
+			newLabel.element.classList.remove( 'hidden' );
+
+			scene.add( newLabel );
+
+			// 將新的 CSS2DObject 與相應的 markers 配對
+			markerLabels[ i ] = newLabel;
+
+		}
+
+		gMarker.setAttribute(
+			'phase',
+			new THREE.InstancedBufferAttribute( new Float32Array( phase ), 1 )
+		);
+
+		scene.add( markers );
+
+
+
+
+		// <Label>這裡主要創建虛的CSS2DObject，然後偵測在球體正背面的顯示或消失
+		// const labelDiv = document.getElementById( 'markerLabel' );
+
+		// 偵測球體背後消失，標籤可見性追蹤
+		// const label = new CSS2DObject( labelDiv );
+		// label.userData = {
+		// 	cNormal: new THREE.Vector3(),
+		// 	cPosition: new THREE.Vector3(),
+		// 	mat4: new THREE.Matrix4(),
+		// 	trackVisibility: () => { // the closer to the edge, the less opacity
+
+		// 		const ud = label.userData;
+		// 		ud.cNormal.copy( label.position ).normalize().applyMatrix3( globe.normalMatrix );
+		// 		ud.cPosition.copy( label.position ).applyMatrix4( ud.mat4.multiplyMatrices( camera.matrixWorldInverse, globe.matrixWorld ) );
+
+		// 		// <到背面慢慢消失>
+		// 		// let d = ud.cPosition.negate().normalize().dot( ud.cNormal );
+		// 		// d = smoothstep( 0.2, 0.5, d );
+		// 		// label.element.style.opacity = d;
+
+		// 		// <到背面透明度變成0.3>
+
+		// 		// 計算相對於相機的方向
+		// 		const toCamera = ud.cPosition.clone().negate().normalize();
+
+		// 		// 計算正面和背面的點積
+		// 		const dotFront = ud.cNormal.dot( toCamera );
+		// 		const dotBack = - ud.cNormal.dot( toCamera );
+
+		// 		// 在正面時透明度為1，在背面時透明度為0.3
+		// 		const opacity = dotFront > dotBack ? 1 : 0.3;
+
+		// 		label.element.style.opacity = opacity;
+		// 		// 設置指針屬性
+		// 		label.element.style.cursor = 'pointer';
+
+
+		// 		// https://github.com/gre/smoothstep/blob/master/index.js
+		// 		function smoothstep( min, max, value ) {
+
+		// 			var x = Math.max( 0, Math.min( 1, ( value - min ) / ( max - min ) ) );
+		// 			return x * x * ( 3 - 2 * x );
+
+		// 		}
+
+		// 	}
+		// };
+		// scene.add( label );
+		// </Label>
+
+		// <Interaction>讓label文字與偵測顯示或消失相關聯
+		// const divID = document.getElementById( 'cubesat' );
+		// for ( let i = 0; i < markerInfo.length; i ++ ) {
+
+		// 	const mi = markerInfo[ i ];
+		// 	divID.innerHTML = `<b>${mi.id}</b>`;
+		// 	label.position.copy( mi.crd );
+		// 	label.element.animate( {
+		// 		duration: 250
+		// 	} );
+		// 	label.element.classList.remove( 'hidden' );
+
+		// }
+
+		// </Interaction>
+
+		const clock = new THREE.Clock();
+
+		renderer.setAnimationLoop( () => {
+
+			const t = clock.getElapsedTime();
+			globalUniforms.time.value = t;
+			// label.userData.trackVisibility();
+			controls.update();
+			renderer.render( scene, camera );
+			labelRenderer.render( scene, camera );
+			composer.render();
+			stats.update();
+
+		} );
+
+		function onWindowResize() {
+
+			camera.aspect = innerWidth / innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( innerWidth, innerHeight );
+			labelRenderer.setSize( innerWidth, innerHeight );
+
+		}
+
+
+	</script>
+	<style>
+		body {
+			overflow: hidden;
+			margin: 0;
+		}
+
+		b {
+			font-weight: 400;
+		}
+
+		#info {
+			position: absolute;
+			bottom: 1vh;
+			color: teal;
+			width: 100%;
+			font-family: Orbitron, sans-serif;
+			text-align: center;
+		}
+
+		#markerLabel {
+			color: rgb(255, 250, 250);
+			width: 230px;
+			height: 48px;
+			font-family: Orbitron, sans-serif;
+			font-size: 14px;
+			font-weight: 'Regular';
+			padding: 2px;
+			margin-top: 55px;
+			margin-left: 70px;
+			overflow: hidden;
+			padding: 0px;
+			/* cursor: pointer; */
+		}
+
+		.hidden {
+			display: none;
+		}
+
+		.text {
+			margin-left: 4px;
+		}
+
+		/* #closeButton {
+			position: absolute;
+			right: 0px;
+			top: 0px;
+			font-family: 'Orbitron, sans-serif';
+			font-size: 14px;
+			font-weight: 700;
+			text-align: center;
+			border: 1px solid gray;
+			border-radius: 3px;
+			background: transparent;
+			color: white;
+		} */
+	</style>
+
+</body>
+
+</html>

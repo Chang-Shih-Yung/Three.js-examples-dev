@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - GLTFloader</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+</head>
+
+<body>
+	<div id="info">
+		<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader<br />
+		Tronco-Server
+	</div>
+
+	<!-- Import maps polyfill -->
+	<!-- Remove this when import maps will be widely supported -->
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
+	<script type="module">
+
+		import * as THREE from 'three';
+
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+		import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+		import Stats from 'three/addons/libs/stats.module.js';
+		import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+		let camera, scene, stats, renderer, model;
+
+		init();
+
+
+		function init() {
+
+			const container = document.createElement( 'div' );
+			document.body.appendChild( container );
+
+			camera = new THREE.PerspectiveCamera( 55, window.innerWidth / window.innerHeight, 0.05, 2000 );
+			camera.position.set( - 1.8, 0.6, 2.7 );
+			scene = new THREE.Scene();
+
+
+			// 導入監控效能視窗
+			stats = new Stats();
+			document.body.appendChild( stats.dom );
+
+
+
+			new RGBELoader()
+				.setPath( 'textures/equirectangular/' )
+				.load( 'metal2.hdr', function ( texture ) {
+
+					texture.mapping = THREE.EquirectangularReflectionMapping;
+
+					scene.background = texture;
+					scene.backgroundBlurriness = 0;
+					scene.environment = texture;
+					scene.background = new THREE.Color( 0xffffff );
+
+
+
+
+				} );
+			const textureLoader = new THREE.TextureLoader();
+			// const map1 = textureLoader.load('textures/camera-textures/Front.png')
+			// const map2 = textureLoader.load( 'textures/noise2.jpg' );
+			// const map3 = textureLoader.load('textures/camera-textures/Yellow PCB.png')
+			// const map4 = textureLoader.load( 'textures/noise.jpg' );
+			// const map5 = textureLoader.load( 'textures/noise3.jpg' );
+			const map6 = textureLoader.load( 'textures/noise4.jpg' );
+			const map7 = textureLoader.load( 'textures/bump.png' );
+
+		
+			const metalMaterial = new THREE.MeshStandardMaterial( {
+				color: 0xd8d8d8,
+				metalness: 1.0,
+				// bumpMap: map6,
+				// bumpScale: 0.00005,
+				metalnessMap: map7,
+				roughness: 0.2,
+		
+			} );
+		
+			// 还可以设置其他光照属性，如emissive和emissiveIntensity
+			metalMaterial.emissive = new THREE.Color( 0xffffff ); // 设置发光颜色为蓝色
+			metalMaterial.emissiveIntensity = 0.01; // 发光强度
+
+			// standard材質變成紅色半透明
+			const silverMaterial = new THREE.MeshStandardMaterial( {
+				color: 0xc4c4c4,
+				// map: map6,
+				metalness: 1.0,
+				bumpMap: map6,
+				bumpScale: 0.0001,
+				metalnessMap: map7,
+				roughness: 0.1,
+				sheenColor: 0x0086ff,
+				clearcoat: 1,
+			} );
+
+			const silverMaterial2 = new THREE.MeshStandardMaterial( {
+				color: 0xc4c4c4,
+				metalnessMap: map6,
+				metalness: 1.0,
+				bumpMap: map6,
+				bumpScale: 0.00025,
+				metalnessMap: map7,
+				roughness: 0.2,
+			} );
+
+			// 材質變成紅色半透明
+			const greyMaterial = new THREE.MeshStandardMaterial( {
+				color: 0x444444,
+				metalness: 0.1, // 金属度
+				roughness: 0.1, // 粗糙度
+
+			} );
+			const greyMaterial2 = new THREE.MeshPhysicalMaterial( {
+				color: 0x898989,
+				metalness: 0.5,
+				roughness: 0.5,
+				bumpMap: map6,
+				bumpScale: 0.0001,
+			} );
+
+			const blackMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0x000000,
+				metalness: 0.1, // 金属度
+				roughness: 0.5, // 粗糙度
+				clearcoat: 0.9,
+		
+			} );
+		
+
+			const bluePlasticMaterial = new THREE.MeshStandardMaterial( {
+				color: 0x385784,
+				roughness: 0.5,
+				metalness: 0.2,
+			} );
+			const whitePlasticMaterial = new THREE.MeshStandardMaterial( {
+				color: 0xd8d8d8,
+				roughness: 0.5,
+				metalness: 0.1,
+			} );
+			const greenPlasticMaterial = new THREE.MeshStandardMaterial( {
+				color: 0x406652,
+				roughness: 0.5,
+				metalness: 0.1,
+			} );
+			const yellowPlasticMaterial = new THREE.MeshStandardMaterial( {
+				color: 0x665f40,
+				roughness: 0.5,
+				metalness: 0.1,
+				clearcoat: 1,
+			} );
+			const softBluePlasticMaterial = new THREE.MeshStandardMaterial( {
+				color: 0x76b8ff,
+				roughness: 0.85,
+				metalness: 0.1,
+			} );
+
+			const glassMaterial = new THREE.MeshPhysicalMaterial( {
+				color: 0xffffff,
+				metalness: 0.02,
+				roughness: 0.05,
+				transmission: 1,
+				ior: 1.5,
+				reflectivity: 0,
+				sheen: 0,
+				specularIntensity: 0.8,
+			} );
+		
+			// 關閉深度排序測試，讓渲染沒有先後順序。關閉意味著不管什麼角度他都會穿透或被穿透於其他材質。在這裡為了顯示下方的cpu材質
+			// glassMaterial.depthTest = false;
+
+			const blackMaterial2 = new THREE.MeshPhysicalMaterial( {
+				color: 0x353535,
+				map: map6,
+				bumpMap: map6,
+				bumpScale: 0.005,
+				metalness: 0.05,
+				roughness: 0.4,
+				clearcoat: 1.0,
+				clearcoatRoughness: 0.5,
+			} );
+			// model
+
+			const loader = new GLTFLoader().setPath( 'models/gltf/' );
+
+			// draco-loader
+			const dracoLoader = new DRACOLoader();
+			dracoLoader.setDecoderPath( '/examples/jsm/libs/draco/' );// 設置 Draco 解碼器的路徑
+			loader.setDRACOLoader( dracoLoader );
+
+			loader.load( 'server2.glb', function ( gltf ) {
+
+				model = gltf.scene;
+				model.position.set( 0, 0, 0 );
+				// model.rotation.y = Math.PI;
+				model.scale.set( 0.05, 0.05, 0.05 );
+				model.traverse( ( child ) => {
+
+					if ( child.isMesh ) {
+
+						if (
+							child.name === 'psu-black' || child.name === 'pcie-black' || child.name === 'memory-black' ||
+							child.name === 'storage-black' ) {
+
+							child.material = blackMaterial2;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if (
+							child.name === 'fan-black' ) {
+
+							child.material = blackMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if (
+							child.name === 'psu-metal' ||
+							child.name === 'cpu-metal' ||
+							child.name === 'cpu-vr-metal' ) {
+
+							child.material = metalMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'fan-grey' ) {
+
+							child.material = greyMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'storage-grey' ) {
+
+							child.material = greyMaterial2;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'psu-silver' ||
+							child.name === 'cpu-silver' ||
+							child.name === 'cpu-vr-silver' ||
+							child.name === 'storage-silver' ||
+							child.name === 'pcie-silver' ) {
+
+							child.material = silverMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'memory-deep-blue' ||
+							child.name === 'fan-deep-blue'
+						) {
+
+							child.material = bluePlasticMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'memory-white' ) {
+
+							child.material = whitePlasticMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'pcie-green' ) {
+
+							child.material = greenPlasticMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'pcie-yellow' ) {
+
+							child.material = yellowPlasticMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'psu-blue' ) {
+
+							child.material = softBluePlasticMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'glass' ) {
+
+							child.material = glassMaterial;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+
+						if ( child.name === 'out-silver' ) {
+
+							child.material = silverMaterial2;
+							child.material.side = THREE.DoubleSide;
+		
+						}
+		
+					}
+		
+				} );
+
+				scene.add( model );
+
+
+			} );
+
+			// renderer = new THREE.WebGLRenderer({ antialias: true });
+			renderer = new THREE.WebGLRenderer( { depth: true } );
+			renderer.sortObjects = true;
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.toneMapping = THREE.ACESFilmicToneMapping;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			renderer.shadowMap.enabled = true;
+			renderer.toneMappingExposure = 2;
+			container.appendChild( renderer.domElement );
+
+
+
+			window.addEventListener( 'resize', onWindowResize );
+
+		}
+
+		// 鏡頭控制
+		const controls = new OrbitControls( camera, renderer.domElement );
+
+		// 是否能放大縮小
+		controls.enableZoom = true;
+
+		controls.dampingFactor = 0.05; // 阻尼系數
+		// controls.autoRotate = true; //啟用自動旋轉
+		// controls.autoRotateSpeed = 1.55;
+		// controls.enablePan = false;
+		controls.enableDamping = true;
+
+		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
+		// controls.minDistance = 2;
+		controls.maxDistance = 10;
+
+
+
+		// 禁止所以滑鼠行為
+		// controls.enabled = false;
+
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+
+
+
+		}
+
+		function update() {
+
+			controls.update();
+
+			stats.update();
+
+		}
+		//
+
+		function animate() {
+
+			renderer.render( scene, camera );
+			requestAnimationFrame( animate );
+			update();
+
+
+		}
+
+		animate();
+
+	</script>
+
+</body>
+
+</html>

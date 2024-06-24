@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - materials - cubemap mipmaps</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100&family=Orbitron:wght@400;500;600;700;800;900&display=swap"
+		rel="stylesheet">
+</head>
+
+<body>
+
+	<div id="container"></div>
+	<div id="markerLabel" class="hidden">
+		<button id="closeButton">X</button>
+		<div class="text" id="idNum"></div>
+		<div class="text" id="magnitude"></div>
+		<div class="text" id="coordinates"></div>
+	</div>
+	<div id="label-cubesat"></div>
+
+	<!-- Import maps polyfill -->
+	<!-- Remove this when import maps will be widely supported -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.7.4/lottie.min.js"></script>
+
+
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
+
+	<script type="module">
+
+		import * as THREE from 'three';
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		import Stats from 'three/addons/libs/stats.module.js';
+		// import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+		import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+		import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+		import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+		import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+		import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+		import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+		// import { LottieLoader } from 'three/addons/loaders/LottieLoader.js';
+
+
+		let camera, scene, renderer, stats, model, composer, labelRenderer;
+
+		// 調整光暈係數
+		const params = {
+			threshold: 0,
+			strength: 0.25,
+			radius: 0.5,
+			exposure: 1
+		};
+
+
+		// 初始化
+		initContent();
+
+
+		// 導入內容部分
+		function initContent() {
+
+			// 導入相機
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 4, 2000000 );
+
+			// camera.position.set( 730, 360, 120 );
+			// camera.position.set( 530, 290, 920 );
+			camera.position.set( 0, 400, 400 );
+
+
+			// 導入監控效能視窗
+			stats = new Stats();
+			document.body.appendChild( stats.dom );
+		
+			// 2d-label渲染
+			labelRenderer = new CSS2DRenderer();
+			labelRenderer.setSize( window.innerWidth, window.innerHeight );
+			labelRenderer.domElement.style.position = 'absolute';
+			labelRenderer.domElement.style.top = '0px';
+			document.body.appendChild( labelRenderer.domElement );
+			labelRenderer.camera = camera;
+
+			// --------font-----------
+			// 導入font
+
+			// const loader = new FontLoader();
+			// loader.load( 'fonts/droid/Orbitron_Regular.json', function ( font ) {
+
+
+			// 	const matLite = new THREE.MeshStandardMaterial( {
+			// 		color: 0xffffff,
+			// 		emissive: 0xffffff,
+			// 		emissiveIntensity: 0.08,
+			// 		// side: THREE.DoubleSide
+			// 	} );
+			// 	const textGroup = new THREE.Object3D();
+
+			// 	const messages = [ 'About Project', 'Cubesat', 'ECS Product', 'Application' ]; // 在這裡添加您想要顯示的文本
+			// 	messages.forEach( ( message, index ) => {
+
+			// 		const shapes = font.generateShapes( message, 5 );
+
+			// 		const geometry = new THREE.ShapeGeometry( shapes );
+
+			// 		geometry.computeBoundingBox();
+
+			// 		const xMid = - 0.5 * ( geometry.boundingBox.max.x - geometry.boundingBox.min.x );
+
+			// 		geometry.translate( xMid, 0, 0 );
+
+
+
+			// 		const text = new THREE.Mesh( geometry, matLite );
+			// 		const clickZonePosition = clickZones[ index ].position;
+			// 		text.position.set( clickZonePosition.x, clickZonePosition.y, clickZonePosition.z );
+			// 		text.lookAt( 0, 0, 0 );
+			// 		text.rotateY( Math.PI );
+
+			// 		textGroup.add( text );
+
+			// 	} );
+			// 	scene.add( textGroup );
+
+
+			// } ); //end load function
+			// --------------
+
+
+			const loader2 = new GLTFLoader().setPath( 'models/gltf/' );
+
+
+			loader2.load( 'planet.glb', function ( gltf ) {
+
+				model = gltf.scene;
+				model.position.set( 0, 0, 0 );
+				model.scale.set( 22, 22, 22 );
+
+				model.traverse( ( child ) => {
+
+					if ( child.isMesh ) {
+
+						if ( child.name === '1' ) {
+
+							const cubesatDiv = document.createElement( 'div' );
+							// console.log( cubesatDiv, 'cubesatDiv' );
+							cubesatDiv.className = 'label-cubesat';
+							cubesatDiv.textContent = 'Cubesat';
+							cubesatDiv.style.backgroundColor = 'transparent';
+							cubesatDiv.style.fontSize = '15px';
+							cubesatDiv.style.fontFamily = 'Orbitron, sans-serif';
+							cubesatDiv.style.opacity = 1;
+							const cubesatLabel = new CSS2DObject( cubesatDiv );
+							cubesatLabel.position.set( 0, - 1.5, 0 );
+							child.add( cubesatLabel ); // 添加標籤到模型 '1'
+							// 添加標籤到模型 '1'
+							child.add( cubesatLabel );
+							// 初始化相機在塗層0
+							camera.layers.enable( 0 );
+							// 添加到塗層0
+							cubesatLabel.layers.set( 0 );
+
+
+						}
+
+
+						if ( child.name === '2' ) {
+
+							const applicationDiv = document.createElement( 'div' );
+							applicationDiv.className = 'label-application';
+							applicationDiv.textContent = 'Application';
+							applicationDiv.style.fontSize = '15px';
+							applicationDiv.style.backgroundColor = 'transparent';
+							applicationDiv.style.fontFamily = 'Orbitron, sans-serif';
+							const applicationLabel = new CSS2DObject( applicationDiv );
+							applicationLabel.position.set( 0, - 1.5, 0 );
+
+							child.add( applicationLabel ); // 添加標籤到模型 '1'
+							// 添加標籤到模型 '1'
+							child.add( applicationLabel );
+							// 初始化相機在塗層0
+							camera.layers.enable( 0 );
+							// 添加到塗層0
+							applicationLabel.layers.set( 0 );
+
+						}
+
+						if ( child.name === '3' ) {
+
+							const ECSProductDiv = document.createElement( 'div' );
+							ECSProductDiv.className = 'label-ECSProduct';
+							ECSProductDiv.textContent = 'ECS Product';
+							ECSProductDiv.style.backgroundColor = 'transparent';
+							ECSProductDiv.style.fontSize = '15px';
+							ECSProductDiv.style.fontFamily = 'Orbitron, sans-serif';
+							const ECSProductLabel = new CSS2DObject( ECSProductDiv );
+							ECSProductLabel.position.set( 0, - 1.5, 0 );
+							// 添加標籤到模型 '1'
+							child.add( ECSProductLabel );
+							// 初始化相機在塗層0
+							camera.layers.enable( 0 );
+							// 添加到塗層0
+							ECSProductLabel.layers.set( 0 );
+
+						}
+
+						if ( child.name === '4' ) {
+
+							const AboutProjectDiv = document.createElement( 'div' );
+							AboutProjectDiv.className = 'label-AboutProject';
+							AboutProjectDiv.textContent = 'About Project';
+							AboutProjectDiv.style.backgroundColor = 'transparent';
+							AboutProjectDiv.style.fontSize = '15px';
+							AboutProjectDiv.style.fontFamily = 'Orbitron, sans-serif';
+							const AboutProjectLabel = new CSS2DObject( AboutProjectDiv );
+							AboutProjectLabel.position.set( 0, - 1.5, 0 );
+							child.add( AboutProjectLabel ); // 添加標籤到模型 '1'
+							// 添加標籤到模型 '1'
+							child.add( AboutProjectLabel );
+							// 初始化相機在塗層0
+							camera.layers.enable( 0 );
+							// 添加到塗層0
+							AboutProjectLabel.layers.set( 0 );
+
+						}
+
+
+					}
+
+
+				} );
+
+
+				model.traverse( ( child ) => {
+
+					if ( child.isMesh ) {
+
+						if (
+							child.name === '1' ||
+							child.name === '2' ||
+							child.name === '3' ||
+							child.name === '4' ) {
+
+							const lightMaterial = new THREE.MeshStandardMaterial( {
+								emissive: 0xff6b00,
+								emissiveIntensity: 1,
+							} );
+
+							child.material = lightMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						}
+
+						if ( child.name === 'planet' ) {
+
+							const lineMaterial = new THREE.MeshStandardMaterial( {
+								color: 0xffffff,
+								wireframe: true,
+								emissive: 0xffffff,
+								emissiveIntensity: 0.02,
+							} );
+							child.material = lineMaterial;
+							child.material.side = THREE.DoubleSide;
+
+						}
+
+					}
+
+				} );
+
+				scene.add( model );
+
+			} );
+
+
+			//建立渲染器
+			const container = document.createElement( 'div' );
+			document.body.appendChild( container );
+			renderer = new THREE.WebGLRenderer();
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+
+			// 光暈渲染
+			const renderScene = new RenderPass( scene, camera );
+
+			const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
+			bloomPass.threshold = params.threshold;
+			bloomPass.strength = params.strength;
+			bloomPass.radius = params.radius;
+
+			const outputPass = new OutputPass( THREE.ReinhardToneMapping );
+
+			composer = new EffectComposer( renderer );
+			composer.addPass( renderScene );
+			// 光暈
+			composer.addPass( bloomPass );
+			// 真實自發光
+			composer.addPass( outputPass );
+
+		}
+
+
+
+
+		// 鏡頭控制
+		const controls = new OrbitControls( camera, labelRenderer.domElement );
+
+		// setInterval( () => {
+
+		// 	console.log( 'x:' + camera.position.x.toFixed( 0 ), 'y:' + camera.position.y.toFixed( 0 ), 'z:' + camera.position.z.toFixed( 0 ) );
+
+		// }, 500 );
+
+		// // 不可翻轉地平線以下
+		controls.maxPolarAngle = Math.PI / 1.8;
+		// // 不可翻轉地平線以上
+		controls.minPolarAngle = Math.PI / 3;
+		// 是否能放大縮小
+		controls.enableZoom = true;
+		controls.dampingFactor = 0.01; // 阻尼系數
+		// controls.autoRotate = true; //啟用自動旋轉
+		controls.autoRotateSpeed = 0.15;
+		controls.enablePan = false;
+		controls.enableDamping = true;
+		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
+		controls.minDistance = 400;
+		controls.maxDistance = 500;
+
+
+
+
+		// 畫面大小監聽
+		window.addEventListener( 'resize', onWindowResize );
+
+		// 瀏覽器變動自適應
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+
+			camera.updateProjectionMatrix();
+
+			renderer.setSize( window.innerWidth, window.innerHeight );
+
+			labelRenderer.setSize( window.innerWidth, window.innerHeight );
+
+		}
+
+
+		// 等於function update(){...}
+		const update = () => {
+
+			controls.update();
+
+			// 數據更新
+			stats.update();
+			labelRenderer.render( scene, camera );
+
+
+		};
+
+
+		// 循環渲染
+		function animate() {
+
+			composer.render();
+			//周期性执行渲染函数，请求下一帧渲染
+			requestAnimationFrame( animate );
+			// 大旋转球体
+			// sphere.rotation.x += 0.0005;
+			// sphere.rotation.y += 0.00001;
+
+			update();
+
+		}
+
+		// 開始渲染:)
+		animate();
+
+
+
+	</script>
+	<style>
+
+	</style>
+
+</body>
+
+</html>

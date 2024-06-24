@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - materials - cubemap mipmaps</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link type="text/css" rel="stylesheet" href="main.css">
+</head>
+
+<body>
+
+	<div id="container"></div>
+	<div id="info">
+		<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - cubemap customized mipmaps
+		demo.<br />
+		Left: nothing happened<br />
+		Right: nothing happened as well<br />
+	</div>
+
+	<!-- Import maps polyfill -->
+	<!-- Remove this when import maps will be widely supported -->
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+	<script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+
+	<script type="importmap">
+			{
+				"imports": {
+					"three": "../build/three.module.js",
+					"three/addons/": "./jsm/"
+				}
+			}
+		</script>
+
+
+	<script type="module">
+
+		import * as THREE from 'three';
+		import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+		import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+		import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+		import Stats from 'three/addons/libs/stats.module.js';
+		import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+
+
+		let camera, scene, renderer, stats, mixer, model, model2;
+		// 初始化
+		initContent();
+
+		// 導入內容部分
+		function initContent() {
+
+			// 導入相機
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 4, 2000000 );
+
+			// camera.position.set(730, - 260, 120);
+			// camera.position.set( 530, 290, 920 );
+
+			// 導入監控效能視窗
+			stats = new Stats();
+			document.body.appendChild( stats.dom );
+
+			// 導入HDRI
+			new RGBELoader()
+				.setPath( 'textures/' )
+				.load( 'royal_esplanade_1k.hdr',
+					function ( texture ) {
+
+						texture.mapping = THREE.EquirectangularReflectionMapping;
+
+						scene.background = texture;
+						scene.backgroundBlurriness = 0;
+
+						scene.environment = texture;
+
+					} );
+
+			// 導入gltf模型，並用開源的dracoLoader庫來壓縮gltf
+			const loader = new GLTFLoader();
+			const dracoLoader = new DRACOLoader();
+			dracoLoader.setDecoderPath( '/examples/jsm/libs/draco/' );// 設置 Draco 解碼器的路徑
+			loader.setDRACOLoader( dracoLoader );// 將 dracoLoader 與 loader 相關聯，從而告訴 Three.js 在加載 GLTF 模型時應該使用 Draco 庫來處理幾何數據
+
+			const blueMetalMaterial = new THREE.MeshStandardMaterial( {
+				color: 0x000000,
+				metalness: 1.3, // 设置金属度为1，表示是金属材质
+				roughness: 1, // 调整粗糙度
+				transparent: true,
+				opacity: 0.4,
+	} );
+	const waterMaterial = new THREE.MeshPhysicalMaterial( {
+			// color: 0xffffff	,
+				refractionRatio: 0,
+				reflectivity: 0.8,
+				metalness: 0.5,
+				sheen: 1,
+				sheenColor: 0x000000,
+				sheenRoughness: 0.2,
+				// roughness: 2, // 调整粗糙度
+				transmission: 0.9,
+				opacity: 1,
+	} );
+	// Load a glTF resource
+	loader.load(
+				// resource URL
+				'models/gltf/car.glb',
+				function ( gltf ) {
+
+
+					model2 = gltf.scene;
+					model2.scale.set( 0.1, 0.1, 0.1 );
+					model2.position.set( 0, 0, 0 );
+					model2.traverse( ( child ) => {
+
+						if ( child.isMesh ) {
+
+							// 例如，您可以根据子对象的名称来确定应用材质的部分
+							if ( child.name === 'windows' ) {
+
+								child.material = blueMetalMaterial;
+								child.material.side = THREE.DoubleSide;
+		
+							}
+
+							if ( child.name === 'water' ) {
+
+								child.material = waterMaterial;
+								child.material.side = THREE.DoubleSide;
+		
+							}
+		
+						}
+		
+					} );
+
+					scene.add( model2 );
+
+
+				}
+
+			);
+
+			// Load a glTF resource
+			loader.load(
+				// resource URL
+				'models/gltf/alien.glb',
+				function ( gltf ) {
+
+
+					model = gltf.scene;
+					model.scale.set( 1000, 1000, 1000 );
+					scene.add( model );
+
+
+
+				}
+
+			);
+
+
+			//建立渲染器
+			renderer = new THREE.WebGLRenderer( { antialias: true, alpha: true } );
+			renderer.setPixelRatio( window.devicePixelRatio );
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			renderer.toneMapping = THREE.ACESFilmicToneMapping;
+			renderer.toneMappingExposure = 1.5;
+			//將渲染器插入到body標籤裡
+			document.body.appendChild( renderer.domElement );
+			renderer.shadowMap.enabled = true;
+			renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+			renderer.physicallyCorrectLights = true;
+
+
+
+		}
+
+
+		// 鏡頭控制
+		const controls = new OrbitControls( camera, renderer.domElement );
+
+
+		// 不可翻轉地平線以下
+		// controls.maxPolarAngle = Math.PI / 2.1;
+		// 不可翻轉地平線以上
+		// controls.minPolarAngle = Math.PI / 2.1;
+
+		// 是否能放大縮小
+		controls.enableZoom = true;
+
+		controls.dampingFactor = 0.01; // 阻尼系數
+		// controls.autoRotate = true; //啟用自動旋轉
+		controls.autoRotateSpeed = 1.15;
+		controls.enablePan = false;
+		controls.enableDamping = true;
+
+		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
+		controls.minDistance = 10;
+		controls.maxDistance = 1015;
+
+
+		// 禁止所以滑鼠行為
+		// controls.enabled = false;
+
+
+
+
+
+
+		// 畫面大小監聽
+		window.addEventListener( 'resize', onWindowResize );
+
+		// 瀏覽器變動自適應
+		function onWindowResize() {
+
+			// 重新設置視窗寬高比
+			camera.aspect = window.innerWidth / window.innerHeight;
+			// 更新相機投影矩陣
+			camera.updateProjectionMatrix();
+			// 重新設置重新設置渲染器渲染範圍
+			renderer.setSize( window.innerWidth, window.innerHeight );
+
+		}
+
+		function update() {
+
+			controls.update();
+
+			// 數據更新
+			stats.update();
+
+
+		}
+
+
+		// 循環渲染
+		function animate() {
+
+			// 如果一个三维场景裡有模型是不停变化的，肯定要周期性调用执行.render()方法，於是下方用clock
+			renderer.render( scene, camera );
+
+			//周期性执行渲染函数，请求下一帧渲染
+			requestAnimationFrame( animate );
+		
+
+
+			update();
+
+		}
+
+		// 開始渲染
+		animate();
+
+
+
+	</script>
+
+</body>
+
+</html>
