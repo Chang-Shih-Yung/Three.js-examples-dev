@@ -32,7 +32,7 @@
 			text-align: center;
 		}
 
-		#markerLabel {
+		.markerLabel {
 			color: rgb(255, 255, 255);
 			width: 300px;
 			height: 50px;
@@ -40,13 +40,12 @@
 			font-size: 22px;
 			font-weight: 'Regular';
 			padding: 15px;
-			margin-top: 70px;
+			margin-top: 80px;
 			margin-left: 70px;
 			overflow: hidden;
-
-			/* padding: 0px; */
+			transition: font-size 0.5s ease;
 			:hover {
-				transition: 0.2s ease;
+				transition: 0.3s ease;
 				padding: 8px 20px 8px;
 				background-color: #ffffff;
 				border: 1px solid rgb(255, 255, 255);
@@ -54,7 +53,15 @@
 				font-size: 24px;
 				color: #000000;
 			}
+			
 		}
+		.markerLabel.disabled-hover{
+				pointer-events: none;
+    		opacity: 0.5; /* 降低不可用标签的透明度 */
+				font-size: 16px;
+				transition: font-size 0.5s ease;
+				
+			}
 
 		.hidden {
 			display: none;
@@ -64,19 +71,6 @@
 			margin-left: 4px;
 		}
 
-		/* #closeButton {
-						position: absolute;
-						right: 0px;
-						top: 0px;
-						font-family: 'Orbitron, sans-serif';
-						font-size: 14px;
-						font-weight: 700;
-						text-align: center;
-						border: 1px solid gray;
-						border-radius: 3px;
-						background: transparent;
-						color: white;
-					} */
 	</style>
 </head>
 
@@ -128,7 +122,7 @@
 		// 調整光暈係數
 		const params = {
 			threshold: 0,
-			strength: 0.3,
+			strength: 0.4,
 			radius: 0.01,
 			exposure: 1
 		};
@@ -203,9 +197,8 @@
 		loader2.load( 'planet2.glb', function ( gltf ) {
 
 			model = gltf.scene;
-			// model.position.set( 0, 0, 0 );
-			// model.rotateY( Math.PI / 2 );
-			model.scale.set( 3.03, 3.03, 3.03 );
+			model.position.set( 0, 0, 0 );
+			model.scale.set( 2.03, 2.03, 2.03 );
 
 			model.traverse( ( child ) => {
 
@@ -238,13 +231,13 @@
 
 		// </GLOBE>
 		// https://web.archive.org/web/20120107030109/http://cgafaq.info/wiki/Evenly_distributed_points_on_sphere#Spirals
-		const counter = 200000;
+		const counter = 50000; //200000
 		const rad = 5;
 		const sph = new THREE.Spherical();
 
 		let r = 0;
 		const dlong = Math.PI * ( 3 - Math.sqrt( 5 ) );
-		const dz = 10 / counter; //2
+		const dz = 2 / counter; //2
 		let long = 0;
 		let z = 1 - dz / 2;
 
@@ -278,7 +271,7 @@
 		g.setAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 1 ) );
 		const m = new THREE.PointsMaterial( {
 			size: 0.0001,
-			color: 0x8FC2FF,
+			color: 0x8FB5FF,
 			vertexColors: true,
 			onBeforeCompile: ( shader ) => {
 
@@ -333,6 +326,8 @@
 		// 圓圈與他的材質與動態
 		const mMarker = new THREE.MeshBasicMaterial( {
 			color: 0xffffff,
+			transparent: true,
+			opacity: 0.8,
 			vertexColors: THREE.FaceColors,
 			onBeforeCompile: ( shader ) => {
 
@@ -382,20 +377,27 @@
 		// 圓圈位置與顯示的標題
 
 		mMarker.defines = { USE_UV: ' ' }; // needed to be set to be able to work with UVs
-		const markers = new THREE.InstancedMesh( gMarker, mMarker, 5 );
+		const markers = new THREE.InstancedMesh( gMarker, mMarker, 6 );
 
 		const dummy = new THREE.Object3D();
 		const phase = [];
-		const markerLabels = [ 'VR Project', '3D Experience', 'Web Develope', 'User Interaction', 'Unity Develope' ];
-		const newLabel = new CSS2DObject( document.getElementById( 'markerLabel' ).cloneNode( true ) );
+		const markerLabels =
+		[ ' - Unity-VR Project - ',
+			' - 3D Experience - ',
+			' - About Me - ',
+			' - User Interaction - ',
+			' - Unity Develope - ',
+			' - Web Develope -',
+		];
 
 		// 為圓圈標記設定特定位置
 		const positions = [
 			new THREE.Vector3( - 2.8, 3, 3 ),
-			new THREE.Vector3( 4.4, - 1.8, 1.8 ),
-			new THREE.Vector3( 4.4, 1.3, - 2 ),
+			new THREE.Vector3( 4.3, - 1.8, 1.8 ),
+			new THREE.Vector3( 4.3, 0.8, - 2.4 ),
 			new THREE.Vector3( - 3, - 1.5, - 3.8 ),
-			new THREE.Vector3( 4, 2.6, 1.8 )
+			new THREE.Vector3( 3.9, 2.6, 1.8 ),
+			new THREE.Vector3( 0, 1, 4.9 )
 		];
 		for ( let i = 0; i < positions.length; i ++ ) {
 
@@ -412,17 +414,21 @@
 			} );
 
 
-			// 創建新的 CSS2DObject 並保存到對應的數組中
-			// 將新的 CSS2DObject 與相應的 markers 配對
+			const labelDiv = document.createElement( 'div' );
+			labelDiv.id = `markerLabel${i}`;
+			labelDiv.className = 'markerLabel';
+			labelDiv.innerHTML = `<b>${markerLabels[ i ]}</b>`;
+		
+			document.body.appendChild( labelDiv );
+
+			const newLabel = new CSS2DObject( labelDiv );
 			newLabel.position.copy( dummy.position );
-			newLabel.element.innerHTML = `<b>${markerLabels[ i ]}</b>`;
 			newLabel.element.animate( {
 				duration: 350
 			} );
-			newLabel.element.classList.remove( 'hidden' );
 
 			// const labelDiv = document.getElementById( 'markerLabel' );
-			// const label = new CSS2DObject( labelDiv );
+			// const newLabel = new CSS2DObject( labelDiv );
 			newLabel.userData = {
 				cNormal: new THREE.Vector3(),
 				cPosition: new THREE.Vector3(),
@@ -439,9 +445,20 @@
 					// https://github.com/gre/smoothstep/blob/master/index.js
 					function smoothstep( min, max, value ) {
 
-						var x = Math.max( 0, Math.min( 1, ( value - min ) / ( max - min ) ) );
-						return x * x * ( 3 - 2 * x );
+						var x = Math.max( 0.2, Math.min( 1, ( value - min ) / ( max - min ) ) );
+						return x * x * ( 7 - 2 * x );
 
+					}
+
+					// 控制hover效果的可见性
+					if ( d < 0.5 ) {
+
+						newLabel.element.classList.add( 'disabled-hover' );
+		
+					} else {
+
+						newLabel.element.classList.remove( 'disabled-hover' );
+		
 					}
 
 				}
@@ -468,7 +485,12 @@
 
 			const t = clock.getElapsedTime();
 			globalUniforms.time.value = t;
-			newLabel.userData.trackVisibility();
+			// newLabel.userData.trackVisibility()
+			markerLabels.forEach( ( label ) => {
+
+				label.userData.trackVisibility();
+		
+	} );
 			controls.update();
 			renderer.render( scene, camera );
 			labelRenderer.render( scene, camera );
