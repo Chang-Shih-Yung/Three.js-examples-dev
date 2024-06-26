@@ -11,6 +11,73 @@
 	<link
 		href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@100&family=Orbitron:wght@400;500;600;700;800;900&display=swap"
 		rel="stylesheet">
+
+	<style>
+		body {
+			overflow: hidden;
+			margin: 0;
+		}
+
+		b {
+			font-weight: 400;
+			cursor: pointer;
+		}
+
+		#info {
+			position: absolute;
+			bottom: 1vh;
+			color: teal;
+			width: 100%;
+			font-family: Orbitron, sans-serif;
+			text-align: center;
+		}
+
+		#markerLabel {
+			color: rgb(255, 255, 255);
+			width: 300px;
+			height: 50px;
+			font-family: Orbitron, sans-serif;
+			font-size: 22px;
+			font-weight: 'Regular';
+			padding: 15px;
+			margin-top: 70px;
+			margin-left: 70px;
+			overflow: hidden;
+
+			/* padding: 0px; */
+			:hover {
+				transition: 0.2s ease;
+				padding: 8px 20px 8px;
+				background-color: #ffffff;
+				border: 1px solid rgb(255, 255, 255);
+				border-radius: 6px;
+				font-size: 24px;
+				color: #000000;
+			}
+		}
+
+		.hidden {
+			display: none;
+		}
+
+		.text {
+			margin-left: 4px;
+		}
+
+		/* #closeButton {
+						position: absolute;
+						right: 0px;
+						top: 0px;
+						font-family: 'Orbitron, sans-serif';
+						font-size: 14px;
+						font-weight: 700;
+						text-align: center;
+						border: 1px solid gray;
+						border-radius: 3px;
+						background: transparent;
+						color: white;
+					} */
+	</style>
 </head>
 
 <body>
@@ -18,10 +85,12 @@
 	<!-- <div id="info"> Click the markers to show the label</div> -->
 	<div id="markerLabel" class="hidden">
 		<!-- <button id="closeButton"></button> -->
-		<div class="text" id="cubesat"></div>
-		<div class="text" id="application"></div>
-		<div class="text" id="ecs-product"></div>
-		<div class="text" id="about-project"></div>
+		<div class="text" id="one"></div>
+		<div class="text" id="two"></div>
+		<div class="text" id="three"></div>
+		<div class="text" id="five"></div>
+		<div class="text" id="six"></div>
+		<div class="text" id="seven"></div>
 	</div>
 
 	<!-- Import maps polyfill -->
@@ -59,7 +128,7 @@
 		// 調整光暈係數
 		const params = {
 			threshold: 0,
-			strength: 0.45,
+			strength: 0.3,
 			radius: 0.01,
 			exposure: 1
 		};
@@ -88,9 +157,9 @@
 		// 鏡頭控制
 		const controls = new OrbitControls( camera, labelRenderer.domElement );
 		// // 不可翻轉地平線以下
-		controls.maxPolarAngle = Math.PI / 1;
+		controls.maxPolarAngle = Math.PI / 1.2;
 		// // 不可翻轉地平線以上
-		controls.minPolarAngle = Math.PI / 3;
+		controls.minPolarAngle = Math.PI / 2.8;
 		// 设置最小方位角（左转的最大角度）
 		// controls.minAzimuthAngle = - Math.PI / 7;
 		// 设置最大方位角（右转的最大角度）
@@ -98,8 +167,8 @@
 		// 是否能放大縮小
 		controls.enableZoom = true;
 		controls.dampingFactor = 0.05; // 阻尼系數
-		// controls.autoRotate = true; //啟用自動旋轉
-		controls.autoRotateSpeed = 0.15;
+		controls.autoRotate = true; //啟用自動旋轉
+		controls.autoRotateSpeed = 0.01;
 		controls.enablePan = false;
 		controls.enableDamping = true;
 		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
@@ -136,7 +205,7 @@
 			model = gltf.scene;
 			// model.position.set( 0, 0, 0 );
 			// model.rotateY( Math.PI / 2 );
-			// model.scale.set( 1.03, 1.03, 1.03 );
+			model.scale.set( 3.03, 3.03, 3.03 );
 
 			model.traverse( ( child ) => {
 
@@ -148,7 +217,7 @@
 							color: 0x255671,
 							wireframe: true,
 							transparent: true,
-							opacity: 0.1,
+							opacity: 0.05,
 
 						} );
 						child.material = lineMaterial;
@@ -166,13 +235,96 @@
 
 		// <GLOBE>
 
-		// 圓點離中心距離
-		const rad = 5;
-
-		const globe = new THREE.Points();
-		scene.add( globe );
 
 		// </GLOBE>
+		// https://web.archive.org/web/20120107030109/http://cgafaq.info/wiki/Evenly_distributed_points_on_sphere#Spirals
+		const counter = 200000;
+		const rad = 5;
+		const sph = new THREE.Spherical();
+
+		let r = 0;
+		const dlong = Math.PI * ( 3 - Math.sqrt( 5 ) );
+		const dz = 10 / counter; //2
+		let long = 0;
+		let z = 1 - dz / 2;
+
+		const pts = [];
+		const clr = [];
+		const c = new THREE.Color();
+		const uvs = [];
+
+		for ( let i = 0; i < counter; i ++ ) {
+
+			r = Math.sqrt( 1 - z * z );
+			const p = new THREE.Vector3(
+				Math.cos( long ) * r,
+				z,
+				- Math.sin( long ) * r
+			).multiplyScalar( rad );
+			pts.push( p );
+			z = z - dz;
+			long = long + dlong;
+
+			c.setHSL( 0.45, 0.5, Math.random() * 0.25 + 0.25 );
+			c.toArray( clr, i * 3 );
+
+			sph.setFromVector3( p );
+			uvs.push( ( sph.theta + Math.PI ) / ( Math.PI * 2 ), 1.0 - sph.phi / Math.PI );
+
+		}
+
+		const g = new THREE.BufferGeometry().setFromPoints( pts );
+		g.setAttribute( 'color', new THREE.Float32BufferAttribute( clr, 3 ) );
+		g.setAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 1 ) );
+		const m = new THREE.PointsMaterial( {
+			size: 0.0001,
+			color: 0x8FC2FF,
+			vertexColors: true,
+			onBeforeCompile: ( shader ) => {
+
+				shader.uniforms.globeTexture = {
+					// value: new THREE.TextureLoader().load( imgData )
+				};
+				shader.vertexShader = `
+    	uniform sampler2D globeTexture;
+      varying float vVisibility;
+      varying vec3 vNormal;
+      varying vec3 vMvPosition;
+      ${shader.vertexShader}
+    `.replace(
+				'gl_PointSize = size;',
+				`
+      	vVisibility = texture(globeTexture, uv).g; // get value from texture
+        gl_PointSize = size * (vVisibility < 0.5 ? 1. : 0.75); // size depends on the value
+        vNormal = normalMatrix * normalize(position);
+        vMvPosition = -mvPosition.xyz;
+        gl_PointSize *= 0.4 + (dot(normalize(vMvPosition), vNormal) * 0.6); // size depends position in camera space
+      `
+			);
+				//console.log(shader.vertexShader);
+				shader.fragmentShader = `
+    	varying float vVisibility;
+      varying vec3 vNormal;
+      varying vec3 vMvPosition;
+      ${shader.fragmentShader}
+    `.replace(
+				'vec4 diffuseColor = vec4( diffuse, opacity );',
+				`
+      	bool circ = length(gl_PointCoord - 0.5) > 0.5; // make points round
+        bool vis = dot(vMvPosition, vNormal) < 0.; // visible only on the front side of the sphere
+      	if (circ || vis) discard;
+        
+        vec3 col = diffuse + (vVisibility > 0.5 ? 0.5 : 0.); // make oceans brighter
+        
+        vec4 diffuseColor = vec4( col, opacity );
+      `
+			);
+				//console.log(shader.fragmentShader);
+
+			}
+		} );
+		const globe = new THREE.Points( g, m );
+		scene.add( globe );
 
 		// <Markers>
 		const markerInfo = []; // information on markers
@@ -180,7 +332,7 @@
 
 		// 圓圈與他的材質與動態
 		const mMarker = new THREE.MeshBasicMaterial( {
-			color: 0xFF6C01,
+			color: 0xffffff,
 			vertexColors: THREE.FaceColors,
 			onBeforeCompile: ( shader ) => {
 
@@ -223,6 +375,9 @@
 
 			// -----------------動態結束
 		} );
+		//globe內部的黑球遮擋
+		const icshdrn = new THREE.Mesh( new THREE.IcosahedronGeometry( rad, 2 ), new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: false } ) );
+		globe.add( icshdrn );
 
 		// 圓圈位置與顯示的標題
 
@@ -232,18 +387,19 @@
 		const dummy = new THREE.Object3D();
 		const phase = [];
 		const markerLabels = [ 'VR Project', '3D Experience', 'Web Develope', 'User Interaction', 'Unity Develope' ];
+		const newLabel = new CSS2DObject( document.getElementById( 'markerLabel' ).cloneNode( true ) );
 
 		// 為圓圈標記設定特定位置
 		const positions = [
 			new THREE.Vector3( - 2.8, 3, 3 ),
 			new THREE.Vector3( 4.4, - 1.8, 1.8 ),
 			new THREE.Vector3( 4.4, 1.3, - 2 ),
-			new THREE.Vector3( - 3, - 1.5, - 3.6 ),
+			new THREE.Vector3( - 3, - 1.5, - 3.8 ),
 			new THREE.Vector3( 4, 2.6, 1.8 )
 		];
 		for ( let i = 0; i < positions.length; i ++ ) {
 
-			// dummy.position.randomDirection().setLength( rad + 0.005 );
+			dummy.position.randomDirection().setLength( rad + 0.005 );
 			dummy.position.copy( positions[ i ] );
 			dummy.lookAt( dummy.position.clone().setLength( rad + 1 ) );
 			dummy.updateMatrix();
@@ -257,13 +413,39 @@
 
 
 			// 創建新的 CSS2DObject 並保存到對應的數組中
-			const newLabel = new CSS2DObject( document.getElementById( 'markerLabel' ).cloneNode( true ) );
+			// 將新的 CSS2DObject 與相應的 markers 配對
 			newLabel.position.copy( dummy.position );
 			newLabel.element.innerHTML = `<b>${markerLabels[ i ]}</b>`;
 			newLabel.element.animate( {
 				duration: 350
 			} );
 			newLabel.element.classList.remove( 'hidden' );
+
+			// const labelDiv = document.getElementById( 'markerLabel' );
+			// const label = new CSS2DObject( labelDiv );
+			newLabel.userData = {
+				cNormal: new THREE.Vector3(),
+				cPosition: new THREE.Vector3(),
+				mat4: new THREE.Matrix4(),
+				trackVisibility: () => { // the closer to the edge, the less opacity
+
+					const ud = newLabel.userData;
+					ud.cNormal.copy( newLabel.position ).normalize().applyMatrix3( globe.normalMatrix );
+					ud.cPosition.copy( newLabel.position ).applyMatrix4( ud.mat4.multiplyMatrices( camera.matrixWorldInverse, globe.matrixWorld ) );
+					let d = ud.cPosition.negate().normalize().dot( ud.cNormal );
+					d = smoothstep( 0.2, 0.7, d );
+					newLabel.element.style.opacity = d;
+
+					// https://github.com/gre/smoothstep/blob/master/index.js
+					function smoothstep( min, max, value ) {
+
+						var x = Math.max( 0, Math.min( 1, ( value - min ) / ( max - min ) ) );
+						return x * x * ( 3 - 2 * x );
+
+					}
+
+				}
+			};
 
 			scene.add( newLabel );
 
@@ -286,7 +468,7 @@
 
 			const t = clock.getElapsedTime();
 			globalUniforms.time.value = t;
-			// label.userData.trackVisibility();
+			newLabel.userData.trackVisibility();
 			controls.update();
 			renderer.render( scene, camera );
 			labelRenderer.render( scene, camera );
@@ -307,72 +489,6 @@
 
 
 	</script>
-	<style>
-		body {
-			overflow: hidden;
-			margin: 0;
-		}
-
-		b {
-			font-weight: 400;
-		}
-
-		#info {
-			position: absolute;
-			bottom: 1vh;
-			color: teal;
-			width: 100%;
-			font-family: Orbitron, sans-serif;
-			text-align: center;
-		}
-
-		#markerLabel {
-			color: rgb(255, 255, 255);
-			width: 230px;
-			height: 48px;
-			font-family: Orbitron, sans-serif;
-			font-size: 16px;
-			font-weight: 'Regular';
-			padding: 10px;
-			margin-top: 55px;
-			margin-left: 70px;
-			overflow: hidden;
-			/* padding: 0px; */
-			/* cursor: pointer; */
-			:hover {
-				transition: 0.2s ease;
-				padding: 10px;
-				background-color: #ffffff;
-				border: 1px solid rgb(255, 255, 255);
-				border-radius: 6px;
-				font-size: 18px;
-				color: #000000;
-			}
-		}
-
-		.hidden {
-			display: none;
-		}
-
-		.text {
-			margin-left: 4px;
-		}
-
-		/* #closeButton {
-			position: absolute;
-			right: 0px;
-			top: 0px;
-			font-family: 'Orbitron, sans-serif';
-			font-size: 14px;
-			font-weight: 700;
-			text-align: center;
-			border: 1px solid gray;
-			border-radius: 3px;
-			background: transparent;
-			color: white;
-		} */
-	</style>
-
 </body>
 
 </html>

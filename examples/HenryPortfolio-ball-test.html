@@ -56,7 +56,7 @@
 		// 調整光暈係數
 		const params = {
 			threshold: 0,
-			strength: 0.5,
+			strength: 0.26,
 			radius: 0.01,
 			exposure: 1
 		};
@@ -82,19 +82,19 @@
 		// 鏡頭控制
 		const controls = new OrbitControls( camera, labelRenderer.domElement );
 		// // 不可翻轉地平線以下
-		controls.maxPolarAngle = Math.PI / 1.8;
+		controls.maxPolarAngle = Math.PI / 1.4;
 		// // 不可翻轉地平線以上
 		controls.minPolarAngle = Math.PI / 3;
 		// 是否能放大縮小
 		controls.enableZoom = true;
 		controls.dampingFactor = 0.01; // 阻尼系數
-		// controls.autoRotate = true; //啟用自動旋轉
-		controls.autoRotateSpeed = 0.15;
-		controls.enablePan = false;
+		controls.autoRotate = true; //啟用自動旋轉
+		controls.autoRotateSpeed = 0.05;
+		controls.enablePan = true;
 		controls.enableDamping = true;
 		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
-		controls.minDistance = 16;
-		controls.maxDistance = 20;
+		controls.minDistance = 17;
+		controls.maxDistance = 17;
 
 		// 光暈渲染
 		const renderScene = new RenderPass( scene, camera );
@@ -126,9 +126,9 @@
 		loader2.load( 'planet2.glb', function ( gltf ) {
 
 			model = gltf.scene;
-			model.position.set( 0, 0, 0 );
+			// model.position.set( 0, 0, 0 );
 			// model.rotateY( Math.PI / 2 );
-			// model.scale.set( 0.95, 0.95, 0.95 );
+			model.scale.set( 3.95, 3.95, 3.95 );
 
 			model.traverse( ( child ) => {
 
@@ -140,7 +140,7 @@
 							color: 0x255671,
 							wireframe: true,
 							transparent: true,
-							opacity: 0.5,
+							opacity: 0.03,
 
 						} );
 						child.material = lineMaterial;
@@ -164,7 +164,7 @@
 
 		let r = 0;
 		const dlong = Math.PI * ( 3 - Math.sqrt( 5 ) );
-		const dz = 2 / counter;
+		const dz = 6 / counter; //2
 		let long = 0;
 		let z = 1 - dz / 2;
 
@@ -197,7 +197,7 @@
 		g.setAttribute( 'color', new THREE.Float32BufferAttribute( clr, 3 ) );
 		g.setAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 1 ) );
 		const m = new THREE.PointsMaterial( {
-	size: 0.0000001,
+	size: 0.0001,
 	vertexColors: true,
 	onBeforeCompile: ( shader ) => {
 
@@ -246,8 +246,8 @@
 		scene.add( globe );
 
 		// <ICOSAHEDRON>
-		const icshdrn = new THREE.Mesh( new THREE.IcosahedronGeometry( rad, 1 ), new THREE.MeshBasicMaterial( { color: 0x00FFF0, wireframe: true, transparent: true, opacity: 0.5 } ) );
-		// globe.add( icshdrn );
+		const icshdrn = new THREE.Mesh( new THREE.IcosahedronGeometry( rad, 8 ), new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: false } ) );
+		globe.add( icshdrn );
 		// </ICOSAHEDRON>
 		// </GLOBE>
 
@@ -410,6 +410,7 @@
 			controls.update();
 			renderer.render( scene, camera );
 			labelRenderer.render( scene, camera );
+			composer.render();
 
 } );
 
