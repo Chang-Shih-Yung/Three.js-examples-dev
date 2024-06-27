@@ -34,14 +34,14 @@
 
 		.markerLabel {
 			color: rgb(255, 255, 255);
-			width: 300px;
+			width: 350px;
 			height: 50px;
 			font-family: Orbitron, sans-serif;
-			font-size: 22px;
+			font-size: 24px;
 			font-weight: 'Regular';
 			padding: 15px;
 			margin-top: 80px;
-			margin-left: 70px;
+			margin-left: 80px;
 			overflow: hidden;
 			transition: font-size 0.5s ease;
 			:hover {
@@ -50,15 +50,31 @@
 				background-color: #ffffff;
 				border: 1px solid rgb(255, 255, 255);
 				border-radius: 6px;
-				font-size: 24px;
+				font-size: 25px;
 				color: #000000;
+				/* 右邊額外三角形 */
+				position: relative;
+				&::before {
+					content: '';
+					position: absolute;
+					top: 29%;
+					right: -20%;
+					border: solid transparent;
+					height: 0;
+					width: 0;
+					border-top-color: #ff6b00;
+					border-width: 12px;
+					margin-left: -12px;
+					/* 旋轉90度 */
+					transform: rotate(-90deg);
+				}
 			}
 			
 		}
 		.markerLabel.disabled-hover{
 				pointer-events: none;
     		opacity: 0.5; /* 降低不可用标签的透明度 */
-				font-size: 16px;
+				font-size: 14px;
 				transition: font-size 0.5s ease;
 				
 			}
@@ -124,7 +140,6 @@
 			threshold: 0,
 			strength: 0.4,
 			radius: 0.01,
-			exposure: 1
 		};
 
 		const scene = new THREE.Scene();
@@ -153,16 +168,16 @@
 		// // 不可翻轉地平線以下
 		controls.maxPolarAngle = Math.PI / 1.2;
 		// // 不可翻轉地平線以上
-		controls.minPolarAngle = Math.PI / 2.8;
+		controls.minPolarAngle = Math.PI / 4;
 		// 设置最小方位角（左转的最大角度）
 		// controls.minAzimuthAngle = - Math.PI / 7;
 		// 设置最大方位角（右转的最大角度）
 		// controls.maxAzimuthAngle = Math.PI / 7;
 		// 是否能放大縮小
 		controls.enableZoom = true;
-		controls.dampingFactor = 0.05; // 阻尼系數
+		controls.dampingFactor = 0.04; // 阻尼系數
 		controls.autoRotate = true; //啟用自動旋轉
-		controls.autoRotateSpeed = 0.01;
+		controls.autoRotateSpeed = 0.05;
 		controls.enablePan = false;
 		controls.enableDamping = true;
 		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
@@ -171,7 +186,7 @@
 
 		// 光暈渲染
 		const renderScene = new RenderPass( scene, camera );
-
+		//最後三個數值代表1.5倍的光暈強度，0.4的光暈半徑，0.85的光暈閾值。但又被params覆蓋
 		const bloomPass = new UnrealBloomPass( new THREE.Vector2( window.innerWidth, window.innerHeight ), 1.5, 0.4, 0.85 );
 		bloomPass.threshold = params.threshold;
 		bloomPass.strength = params.strength;
@@ -371,7 +386,7 @@
 			// -----------------動態結束
 		} );
 		//globe內部的黑球遮擋
-		const icshdrn = new THREE.Mesh( new THREE.IcosahedronGeometry( rad, 2 ), new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: false } ) );
+		const icshdrn = new THREE.Mesh( new THREE.IcosahedronGeometry( rad, 2 ), new THREE.MeshBasicMaterial( { color: 0x000000, wireframe: false, transparent: true, opacity: 0.7 } ) );
 		globe.add( icshdrn );
 
 		// 圓圈位置與顯示的標題
@@ -382,12 +397,12 @@
 		const dummy = new THREE.Object3D();
 		const phase = [];
 		const markerLabels =
-		[ ' - Unity-VR Project - ',
-			' - 3D Experience - ',
-			' - About Me - ',
-			' - User Interaction - ',
-			' - Unity Develope - ',
-			' - Web Develope -',
+		[ 'Unity-VR Projects',
+			'3D Experience',
+			'About Henry',
+			'User Interaction',
+			'Unity Develope',
+			'Web Projects',
 		];
 
 		// 為圓圈標記設定特定位置
