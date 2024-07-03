@@ -126,7 +126,7 @@
 		// 調整光暈係數
 		const params = {
 			threshold: 0,
-			strength: 0.4,
+			strength: 0.35,
 			radius: 0.01,
 		};
 
@@ -201,7 +201,7 @@
 			model = gltf.scene;
 			model.position.set( 0, 0, 0 );
 			// model.scale.set( 0.531, 0.531, 0.531 );
-			model.scale.set( 2, 2, 2 );
+			model.scale.set( 2.2, 2.2, 2.2 );
 
 			model.traverse( ( child ) => {
 
@@ -213,7 +213,7 @@
 							color: 0x255671,
 							wireframe: true,
 							transparent: true,
-							opacity: 0.035,
+							opacity: 0.04,
 
 						} );
 						child.material = lineMaterial;
