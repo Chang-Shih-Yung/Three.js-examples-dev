@@ -157,10 +157,6 @@
 		controls.maxPolarAngle = Math.PI / 1.2;
 		// // 不可翻轉地平線以上
 		controls.minPolarAngle = Math.PI / 4;
-		// 设置最小方位角（左转的最大角度）
-		// controls.minAzimuthAngle = - Math.PI / 7;
-		// 设置最大方位角（右转的最大角度）
-		// controls.maxAzimuthAngle = Math.PI / 7;
 		// 是否能放大縮小
 		controls.enableZoom = true;
 		controls.dampingFactor = 0.04; // 阻尼系數
@@ -453,6 +449,8 @@
 						return x * x * ( 7 - 2 * x );
 
 					}
+
+					markerLabels[ 2 ].element.style.color = '#ff6b00';
 
 					// 控制hover效果的可见性
 					if ( d < 0.5 ) {
