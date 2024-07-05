@@ -222,7 +222,6 @@
 			} );
 
 			scene.add( model );
-			console.log( model );
 
 		} );
 
@@ -328,7 +327,6 @@
 			color: 0xffffff,
 			transparent: true,
 			opacity: 0.6,
-			vertexColors: THREE.FaceColors,
 			onBeforeCompile: ( shader ) => {
 
 				shader.uniforms.time = globalUniforms.time;
@@ -406,6 +404,21 @@
 			dummy.lookAt( dummy.position.clone().setLength( rad + 1 ) );
 			dummy.updateMatrix();
 			markers.setMatrixAt( i, dummy.matrix );
+
+			 if ( i === 2 ) {
+
+				// 设置第三个 marker 的材质为红色
+				//透明度0.5
+
+				markers.setColorAt( i, new THREE.Color( 0xff6b00 ) );
+		
+	} else {
+
+				// 设置其他 marker 的材质为默认颜色
+				markers.setColorAt( i, new THREE.Color( 0xffffff ) );
+		
+	}
+
 			phase.push( Math.random() );
 
 			markerInfo.push( {
@@ -426,9 +439,6 @@
 			newLabel.element.animate( {
 				duration: 350
 			} );
-
-			// const labelDiv = document.getElementById( 'markerLabel' );
-			// const newLabel = new CSS2DObject( labelDiv );
 			newLabel.userData = {
 				cNormal: new THREE.Vector3(),
 				cPosition: new THREE.Vector3(),
@@ -450,7 +460,7 @@
 
 					}
 
-					markerLabels[ 2 ].element.style.color = '#ff6b00';
+					// markerLabels[ 2 ].element.style.color = '#ffffff';
 
 					// 控制hover效果的可见性
 					if ( d < 0.5 ) {
