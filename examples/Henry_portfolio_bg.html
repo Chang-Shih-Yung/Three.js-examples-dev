@@ -19,7 +19,7 @@
 
 				vUv = uv;
 
-				gl_Position = vec4( position, 0.9 ); //修改这里可以改变大小
+				gl_Position = vec4( position, 0.8 ); //修改这里可以改变大小
 
 			}
 
@@ -34,7 +34,7 @@
 			void main()	{
 
 				vec2 p = - 1.0 + 4.0 * vUv;
-				float a = time * 1055.0; //修改这里可以改变速度
+				float a = time * 755.0; //修改这里可以改变速度
 				float d, e, f, g = 0.10 / 60.0 ,h ,i ,r ,q;
 
 				e = 400.0 * ( p.x * 0.3 + 0.3 );
@@ -94,7 +94,7 @@
 				camera = new THREE.OrthographicCamera( - 1, 1, 1, - 1, 0, 1 );
 				scene = new THREE.Scene();
 
-				const geometry = new THREE.PlaneGeometry( 30, 2 ); //修改这里可以改变大小
+				const geometry = new THREE.PlaneGeometry( 25, 5 ); //修改这里可以改变大小
 
 				uniforms = {
 					time: { value: 1.0 }
