@@ -36,11 +36,11 @@
 			color: rgb(255, 255, 255);
 			width: 350px;
 			height: 50px;
-			font-family: Orbitron, sans-serif;
-			font-size: 22px;
+			/* font-family: Orbitron, sans-serif; */
+			font-size: 16px;
 			font-weight: 'Regular';
 			padding: 15px;
-			margin-top: 80px;
+			margin-top: 150px;
 			margin-left: 100px;
 			overflow: hidden;
 			transition: font-size 0.5s ease;
@@ -125,13 +125,13 @@
 		// 調整光暈係數
 		const params = {
 			threshold: 0,
-			strength: 0.45,
+			strength: 0.23,
 			radius: 0.01,
 		};
 
 		const scene = new THREE.Scene();
-		const camera = new THREE.PerspectiveCamera( 70, innerWidth / innerHeight, 4, 200000 );
-		camera.position.set( 70, 0, - 5 ).setLength( 1400 );
+		const camera = new THREE.PerspectiveCamera( 30, innerWidth / innerHeight, 4, 200000 );
+		camera.position.set( 80, 0, - 5 ).setLength( 1400 );
 		const renderer = new THREE.WebGLRenderer( { antialias: true } );
 		renderer.setPixelRatio( window.devicePixelRatio );
 		renderer.setSize( innerWidth, innerHeight );
@@ -160,7 +160,7 @@
 		controls.enableZoom = true;
 		controls.dampingFactor = 0.04; // 阻尼系數
 		controls.autoRotate = true; //啟用自動旋轉
-		controls.autoRotateSpeed = 0.05;
+		controls.autoRotateSpeed = 0;
 		controls.enablePan = false;
 		controls.enableDamping = true;
 		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
@@ -268,7 +268,7 @@
 		g.setAttribute( 'color', new THREE.Float32BufferAttribute( clr, 3 ) );
 		g.setAttribute( 'uv', new THREE.Float32BufferAttribute( uvs, 1 ) );
 		const m = new THREE.PointsMaterial( {
-			size: 0.0001,
+			size: 0.05001,
 			color: 0x8FB5FF,
 			vertexColors: true,
 			onBeforeCompile: ( shader ) => {
@@ -325,7 +325,7 @@
 		const mMarker = new THREE.MeshBasicMaterial( {
 			color: 0xffffff,
 			transparent: true,
-			opacity: 0.6,
+			opacity: 1,
 			onBeforeCompile: ( shader ) => {
 
 				shader.uniforms.time = globalUniforms.time;
@@ -379,9 +379,9 @@
 		const dummy = new THREE.Object3D();
 		const phase = [];
 		const markerLabels =
-		[ 'Unity Develope',
+		[ 'Front-end Develope',
 			'3D Experience',
-			'About Henry',
+			'WebGL+GSGL',
 			'AI Solution',
 			'User Interaction',
 			'Web Develope',
@@ -393,7 +393,7 @@
 			new THREE.Vector3( 4.3, - 1.8, 1.8 ),
 			new THREE.Vector3( 4.3, 0.8, - 2.4 ),
 			new THREE.Vector3( - 3, - 1.5, - 3.8 ),
-			new THREE.Vector3( 3.9, 2.6, 1.8 ),
+			new THREE.Vector3( 5, 1.6, 0.8 ),
 			new THREE.Vector3( 0, 1, 4.9 )
 		];
 		for ( let i = 0; i < positions.length; i ++ ) {
@@ -409,7 +409,7 @@
 				// 设置第三个 marker 的材质为红色
 				//透明度0.5
 
-				markers.setColorAt( i, new THREE.Color( 0xff6b00 ) );
+				markers.setColorAt( i, new THREE.Color( 0x6554CA ) );
 		
 	} else {
 

@@ -44,7 +44,7 @@
 
 		const params = {
 			threshold: 0,
-			strength: 0.08,
+			strength: 0,
 			radius: 0.5,
 			exposure: 1
 		};
@@ -232,7 +232,7 @@
 			loader2.load( 'cr60-2.glb', function ( gltf ) {
 
 				model = gltf.scene;
-				model.position.set( 0, - 1.5, 0 );
+				model.position.set( 0, - 2, 0 );
 				// model.rotation.y = Math.PI;
 				model.scale.set( 0.12, 0.12, 0.12 );
 				model.traverse( ( child ) => {
