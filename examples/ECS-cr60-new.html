@@ -44,7 +44,7 @@
 
 		const params = {
 			threshold: 0,
-			strength: 0.08,
+			strength: 0.04,
 			radius: 0.5,
 			exposure: 1
 		};
@@ -65,7 +65,7 @@
 			const loader = new FontLoader();
 			loader.load( 'fonts/droid/droid_sans_bold.typeface.json', function ( font ) {
 
-				const color = new THREE.Color( 0x444444 );
+				const color = new THREE.Color( 0xffffff );
 
 				const matLite = new THREE.MeshBasicMaterial( {
 					color: color,
@@ -94,7 +94,7 @@
 				text.position.x = 0;
 				text.position.y = - 1;
 				text.rotation.x = Math.PI / - 2;
-				// scene.add( text );
+				scene.add( text );
 
 
 
