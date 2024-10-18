@@ -53,7 +53,7 @@
 		renderer.setSize( innerWidth, innerHeight );
 		renderer.setClearColor( 0x000000 );
 		document.body.appendChild( renderer.domElement );
-
+		
 		const labelRenderer = new CSS2DRenderer();
 		labelRenderer.setSize( window.innerWidth, window.innerHeight );
 		labelRenderer.domElement.style.position = 'absolute';
@@ -73,7 +73,7 @@
 		controls.dampingFactor = 0.01; // 阻尼系數
 		// controls.autoRotate = true; //啟用自動旋轉
 		controls.autoRotateSpeed = 0.15;
-		controls.enablePan = false;
+		controls.enablePan = false; //
 		controls.enableDamping = true;
 		// 相機香外向內移動，到時候可以用在不同狀態縮放球體功能
 		controls.minDistance = 16;

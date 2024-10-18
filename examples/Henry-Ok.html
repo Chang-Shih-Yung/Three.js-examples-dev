@@ -59,7 +59,7 @@
 		// 調整光暈係數
 		const params = {
 			threshold: 0,
-			strength: 0.35,
+			strength: 0.3,
 			radius: 1,
 			exposure: 1
 		};
@@ -145,10 +145,10 @@
 					if ( child.name === 'planet' ) {
 
 						const lineMaterial = new THREE.MeshBasicMaterial( {
-							color: 0xffffff,
+							color: 0x6554CA,
 							wireframe: true,
 							transparent: true,
-							opacity: 0.008,
+							opacity: 1,
 
 						} );
 						child.material = lineMaterial;

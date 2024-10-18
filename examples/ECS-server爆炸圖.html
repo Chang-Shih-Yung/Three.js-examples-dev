@@ -71,7 +71,7 @@
 
 			// 導入監控效能視窗
 			stats = new Stats();
-			document.body.appendChild( stats.dom );
+			// document.body.appendChild( stats.dom );
 
 
 			new RGBELoader()
@@ -83,7 +83,7 @@
 					scene.background = texture;
 					scene.backgroundBlurriness = 0;
 					scene.environment = texture;
-					scene.background = new THREE.Color( 0xffffff );
+					scene.background = new THREE.Color( 0x000000 );
 
 				} );
 
@@ -107,7 +107,7 @@
 
 					spriteMaterial = new THREE.SpriteMaterial( {
 						map: texture,
-						color: 0xc67f00,
+						color: 0x2a52b1,
 						transparent: true,
 						opacity: 1,
 						side: THREE.DoubleSide, // 啟用雙面渲染
