@@ -44,11 +44,7 @@
 
 		const params = {
 			threshold: 0,
-<<<<<<< HEAD
-			strength: 0.04,
-=======
-			strength: 0,
->>>>>>> 61654c39b25bd27dce0fedf60f778b923bedbb0e
+			strength: 0.01,
 			radius: 0.5,
 			exposure: 1
 		};
@@ -230,8 +226,8 @@
 
 			// draco-loader
 			const dracoLoader = new DRACOLoader();
-			dracoLoader.setDecoderPath( '/examples/jsm/libs/draco/' );// 設置 Draco 解碼器的路徑
-			loader2.setDRACOLoader( dracoLoader );
+			dracoLoader.setDecoderPath('https://www.gstatic.com/draco/v1/decoders/');// CDN Draco 解碼器的路徑
+			loader.setDRACOLoader(dracoLoader);
 
 			loader2.load( 'cr60-2.glb', function ( gltf ) {
 
